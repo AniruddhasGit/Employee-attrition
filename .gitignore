@@ -1,0 +1,27 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+
+# notebooks
+.ipynb_checkpoints/
+
+# node
+node_modules/
+dist/
+.next/
+
+# secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# os
+.DS_Store
+Thumbs.db
