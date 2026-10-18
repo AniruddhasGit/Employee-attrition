@@ -31,11 +31,20 @@ def client():
     with TestClient(app, headers={"Origin": "http://localhost:3000"}) as c:
         yield c
     with engine.begin() as conn:
-        # Keep the seeded demo history; drop only what the test itself created.
-        conn.execute(text("DELETE FROM sessions"))
-        for table in ("check_ins", "action_plans", "team_updates"):
-            conn.execute(text(f"DELETE FROM {table} WHERE NOT seeded"))
         conn.execute(text("TRUNCATE contact_messages RESTART IDENTITY"))
+    # Undo what the test did to the demo (visitor rows, plan changes, rescored people) the same
+    # way the daily reset does, so the seeded history stays intact for the next test.
+    from datetime import date
+
+    from api import demo
+    from api.db import SessionLocal
+
+    with SessionLocal() as s:
+        if demo.personas(s):
+            demo.reset(s, date.today())
+        else:
+            s.execute(text("DELETE FROM sessions"))
+            s.commit()
 
 
 @pytest.fixture(scope="session")
