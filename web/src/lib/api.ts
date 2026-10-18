@@ -15,7 +15,6 @@ export type Driver = {
 };
 
 export type Session = { role: Role; displayName: string; home: "/hr" | "/me" };
-export type DemoAccount = { email: string; label: string; role: Role };
 
 export type Option = { value: string | number; label: string };
 export type Question = {
@@ -259,7 +258,6 @@ function qs(params: Record<string, string | number | undefined>): string {
 export const signIn = (email: string, password: string) => post<Session>("/api/auth/login", { email, password });
 export const signOut = () => post<void>("/api/auth/logout", {});
 export const getSession = () => request<Session>("/api/auth/me");
-export const getDemoAccounts = () => request<DemoAccount[]>("/api/auth/demo-accounts");
 
 // Employee
 export const getMe = () => request<MeHome>("/api/me");

@@ -1,14 +1,23 @@
 import { expect, test } from "@playwright/test";
 import { persona, signInAs } from "./helpers";
 
-test("hr demo button lands on /hr", async ({ page }) => {
+test("hr account lands on /hr", async ({ page }) => {
   await signInAs(page, "hr");
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
 });
 
-test("employee demo button lands on /me", async ({ page }) => {
+test("employee account lands on /me", async ({ page }) => {
   await signInAs(page, "stable");
   await expect(page.getByRole("link", { name: "Check-in" })).toBeVisible();
+});
+
+test("the sign-in page lists no accounts", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Sign in." })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByText("@retain.demo")).toHaveCount(0);
+  await expect(page.getByText("Sign in as")).toHaveCount(0);
+  expect(await page.content()).not.toContain("@retain.demo");
 });
 
 test("wrong password shows inline error", async ({ page }) => {
