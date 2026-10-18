@@ -25,3 +25,6 @@ dist/
 # os
 .DS_Store
 Thumbs.db
+
+# third-party design reference (local only)
+docs/design/reference.png
