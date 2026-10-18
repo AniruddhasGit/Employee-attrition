@@ -20,7 +20,7 @@ def test_seed_loads_everyone(seeded):
 
 def test_seed_idempotent(seeded):
     with SessionLocal() as s:
-        run(s, get_settings().models_dir)
+        run(s, get_settings().models_dir, force=True)
         assert s.scalar(select(func.count()).select_from(Employee)) == 1470
         assert s.scalar(select(func.count()).select_from(ModelRun)) == 1
 
@@ -30,3 +30,10 @@ def test_band_edges():
     assert svc.band(svc.threshold) == "high"
     assert svc.band(0.0) == "low"
     assert svc.band(svc.threshold * 0.8) == "elevated"
+
+
+def test_seed_skips_when_current(seeded):
+    """Free hosts restart often; re-seeding an up-to-date database must be a cheap no-op."""
+    with SessionLocal() as s:
+        assert run(s, get_settings().models_dir) == 0
+        assert run(s, get_settings().models_dir, force=True) == 1470

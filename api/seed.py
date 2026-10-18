@@ -17,9 +17,21 @@ def _native(v):
     return v.item() if hasattr(v, "item") else v
 
 
-def run(session: Session, models_dir: Path) -> int:
+def _is_current(session: Session, svc: ModelService, expected: int) -> bool:
+    """True when this exact training run is already loaded (same version and timestamp)."""
+    run_row = session.query(ModelRun).filter_by(version=svc.metrics["version"]).one_or_none()
+    if run_row is None or run_row.metrics.get("created_at") != svc.metrics.get("created_at"):
+        return False
+    return session.query(Employee).count() == expected
+
+
+def run(session: Session, models_dir: Path, force: bool = False) -> int:
+    """Upsert employees and the model run. Returns rows written (0 when already current)."""
     models_dir = Path(models_dir)
     svc = ModelService(models_dir)
+    oof_rows = len(pd.read_parquet(models_dir / "oof.parquet"))
+    if not force and _is_current(session, svc, oof_rows):
+        return 0
     df = load_raw()
     oof = pd.read_parquet(models_dir / "oof.parquet")
     drivers = pd.read_parquet(models_dir / "drivers.parquet")
@@ -56,4 +68,5 @@ if __name__ == "__main__":
     from api.db import SessionLocal
 
     with SessionLocal() as s:
-        print(f"seeded {run(s, get_settings().models_dir)} employees")
+        n = run(s, get_settings().models_dir)
+        print(f"seeded {n} employees" if n else "database already current; nothing to seed")

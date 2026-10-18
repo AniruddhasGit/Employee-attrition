@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { useRef } from "react";
 import { HeroHaze } from "./HeroHaze";
 import { PillButton } from "@/components/ui/PillButton";
 import { EASE_IN_OUT, EASE_OUT } from "@/lib/motion";
@@ -42,11 +43,19 @@ function Letters({ text, delay, reduce }: { text: string; delay: number; reduce:
 
 export function Hero() {
   const reduce = useReducedMotion() ?? false;
+  const ref = useRef<HTMLElement>(null);
+  // Parallax on the way out: type lifts and fades faster than the mist drifts.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const contentTransform = useTransform(scrollYProgress, (v) => (reduce ? "none" : `translateY(${v * -120}px)`));
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, reduce ? 1 : 0]);
+  const hazeTransform = useTransform(scrollYProgress, (v) => (reduce ? "none" : `translateY(${v * 80}px) scale(${1 + v * 0.06})`));
 
   return (
-    <section aria-labelledby="hero-title" className="p-2">
+    <section ref={ref} aria-labelledby="hero-title" className="p-2">
       <div className="relative isolate flex min-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-2xl bg-[radial-gradient(120%_90%_at_70%_20%,var(--hero-c)_0%,var(--hero-a)_45%,var(--hero-b)_100%)]">
-        <HeroHaze />
+        <motion.div className="absolute inset-0" style={{ transform: hazeTransform }}>
+          <HeroHaze />
+        </motion.div>
 
         {/* A single drawn arc, echoing the orbit the particles leave along. */}
         <svg
@@ -69,7 +78,10 @@ export function Hero() {
           />
         </svg>
 
-        <div className="relative z-10 mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-12 content-end gap-y-10 px-4 pb-8 pt-28 md:px-8 md:pb-10">
+        <motion.div
+          style={{ transform: contentTransform, opacity: contentOpacity }}
+          className="relative z-10 mx-auto grid w-full max-w-[1400px] flex-1 grid-cols-12 content-end gap-y-10 px-4 pb-8 pt-28 md:px-8 md:pb-10"
+        >
           <nav aria-label="Features" className="col-span-12 md:col-span-4 md:col-start-9 md:row-start-1 md:self-start">
             <ol className="flex flex-col gap-3">
               {INDEX.map((item, i) => (
@@ -127,7 +139,7 @@ export function Hero() {
               </span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { ArrowCircle } from "./ArrowCircle";
+import { Magnetic } from "./Magnetic";
 
 type Variant = "light" | "dark";
 
@@ -26,14 +27,18 @@ export function PillButton({
   );
   if (href) {
     return (
-      <Link href={href} className={cls}>
-        {inner}
-      </Link>
+      <Magnetic>
+        <Link href={href} className={cls}>
+          {inner}
+        </Link>
+      </Magnetic>
     );
   }
   return (
-    <button {...rest} className={cls}>
-      {inner}
-    </button>
+    <Magnetic>
+      <button {...rest} className={cls}>
+        {inner}
+      </button>
+    </Magnetic>
   );
 }
