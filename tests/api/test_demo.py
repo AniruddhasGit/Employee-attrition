@@ -64,6 +64,7 @@ def test_personas_tell_their_story(seeded):
         assert [f for f in sharp_drop(prev.answers, last.answers, prev.risk_score,
                                       last.risk_score) if f != "risk"]
         assert e.risk_band == "high" and e.risk_score >= svc.threshold
+        assert last.answers["OverTime"] == "Yes"  # so "reduce overtime" is a live option
 
         e = _persona(s, "not_answered")
         assert all(c.quarter != current for c in _checkins(s, e.employee_id))

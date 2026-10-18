@@ -26,6 +26,16 @@ test("sharp_drop shows the change sentence", async ({ page }) => {
   await expect(page.getByTestId("change")).toContainText(/since \d{4}-Q\d/);
 });
 
+// Before the plan test below, which takes this persona off overtime.
+test("what-if responds to a lever", async ({ page }) => {
+  await openPerson(page, "sharp_drop");
+  const after = page.getByTestId("sim-after");
+  await expect(after).toHaveText(/\d+%/);
+  const before = await after.textContent();
+  await page.getByRole("radio", { name: "No overtime" }).check();
+  await expect(after).not.toHaveText(before ?? "");
+});
+
 test("a reduce overtime plan shows the estimate, and marking it done moves the header score", async ({ page }) => {
   await openPerson(page, "sharp_drop");
   const score = page.getByTestId("person-score");
@@ -41,15 +51,6 @@ test("a reduce overtime plan shows the estimate, and marking it done moves the h
   await plan.getByRole("button", { name: "Mark done" }).click();
   await expect(plan).toContainText("Done");
   await expect(score).not.toHaveText(before ?? "");
-});
-
-test("what-if responds to a lever", async ({ page }) => {
-  await openPerson(page, "sharp_drop");
-  const after = page.getByTestId("sim-after");
-  await expect(after).toHaveText(/\d+%/);
-  const before = await after.textContent();
-  await page.getByRole("radio", { name: "Frequently" }).check();
-  await expect(after).not.toHaveText(before ?? "");
 });
 
 test("the person page has no horizontal scroll on a phone", async ({ page }) => {

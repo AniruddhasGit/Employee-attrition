@@ -270,8 +270,8 @@ def seed_history(db, today: date) -> None:
     # Personas: the lowest employee ID that fits each story, nudged into shape if none does.
     used: set[int] = set()
 
-    def pick(ok, force=None) -> int:
-        for eid in ids:
+    def pick(ok, force=None, order=None) -> int:
+        for eid in order or ids:
             if eid not in used and ok(eid):
                 used.add(eid)
                 return eid
@@ -286,10 +286,11 @@ def seed_history(db, today: date) -> None:
             return False
         fields = sharp_drop(answers[eid][last], answers[eid][cur], scores[(eid, last)],
                             scores[(eid, cur)])
-        return any(f != "risk" for f in fields) and svc.band(scores[(eid, cur)]) == "high"
+        return (any(f != "risk" for f in fields) and svc.band(scores[(eid, cur)]) == "high"
+                and answers[eid][cur]["OverTime"] == "Yes")
 
     def force_sharp(eid):
-        if eid in plans or svc.band(base_scores[eid]) != "high":
+        if eid in plans or svc.band(base_scores[eid]) != "high" or base[eid]["OverTime"] != "Yes":
             return False
         c = next((c for c in SCALE_FIELDS if int(base[eid][c]) >= 3), None)
         if c is None:
@@ -335,7 +336,10 @@ def seed_history(db, today: date) -> None:
         return scores[(eid, cur)] <= base_scores[eid] - 0.05
 
     chosen = {
-        "sharp_drop": pick(is_sharp, force_sharp),
+        # The most striking drop leads the dashboard's early-warning list.
+        "sharp_drop": pick(is_sharp, force_sharp, order=sorted(
+            (eid for eid in ids if (eid, cur) in scores),
+            key=lambda eid: (scores[(eid, last)] - scores[(eid, cur)], eid))),
         "stable": pick(is_stable, force_stable),
         "not_answered": pick(is_not_answered),
         "plan_worked": pick(is_plan_worked, force_plan_worked),
