@@ -23,3 +23,9 @@ def health(session: SessionDep) -> dict:
     metrics = settings.models_dir / "metrics.json"
     version = json.loads(metrics.read_text())["version"] if metrics.exists() else None
     return {"status": "ok", "db": db_ok, "model_version": version}
+
+
+from api.routes import employees, model  # noqa: E402
+
+app.include_router(employees.router)
+app.include_router(model.router)
