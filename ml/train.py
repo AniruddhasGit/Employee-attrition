@@ -20,6 +20,8 @@ from ml.evaluate import (
     metrics_at,
     threshold_curve,
 )
+from ml.explain import drivers_from_shap, shap_by_feature
+from ml.fairness import slices
 from ml.features import split_X_y
 from ml.model import RANDOM_STATE, build_pipeline
 from ml.paths import MODELS_DIR
@@ -40,6 +42,21 @@ def _oof(X: pd.DataFrame, y: pd.Series, save_dir: Path | None = None):
         if save_dir is not None:
             joblib.dump(model, save_dir / f"fold_{k}.joblib", compress=3)
     return proba, fold
+
+
+def _save_drivers(df: pd.DataFrame, X: pd.DataFrame, fold: np.ndarray, out_dir: Path) -> None:
+    """Top-5 SHAP drivers per employee, each explained by the fold model that never saw them."""
+    records = []
+    for k in range(N_FOLDS):
+        mask = fold == k
+        model = joblib.load(out_dir / f"fold_{k}.joblib")
+        impacts = shap_by_feature(model, X[mask])
+        for i, (idx, row) in enumerate(X[mask].iterrows()):
+            drivers = drivers_from_shap(row, impacts.iloc[i])
+            records.append({"EmployeeID": int(df.at[idx, "EmployeeID"]),
+                            "drivers": json.dumps(drivers)})
+    pd.DataFrame(records).sort_values("EmployeeID").to_parquet(
+        out_dir / "drivers.parquet", index=False)
 
 
 def main(out_dir: Path = MODELS_DIR, n_boot: int = 1000) -> dict:
@@ -63,6 +80,7 @@ def main(out_dir: Path = MODELS_DIR, n_boot: int = 1000) -> dict:
     joblib.dump(build_pipeline().fit(X, y), out_dir / "refit.joblib", compress=3)
     oof = pd.DataFrame({"EmployeeID": df["EmployeeID"], "fold": fold_all, "risk_score": oof_all})
     oof.to_parquet(out_dir / "oof.parquet", index=False)
+    _save_drivers(df, X, fold_all, out_dir)
 
     metrics = {
         "version": VERSION,
@@ -75,6 +93,7 @@ def main(out_dir: Path = MODELS_DIR, n_boot: int = 1000) -> dict:
         "threshold_curve": threshold_curve(y_te, p_te),
         "calibration": calibration(y_te, p_te),
         "oof_all": metrics_at(y, oof_all, threshold),
+        "fairness": slices(df, oof, threshold),
     }
     (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
     (out_dir / "test_ids.json").write_text(json.dumps(id_te.tolist()))

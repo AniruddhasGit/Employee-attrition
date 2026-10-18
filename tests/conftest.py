@@ -18,3 +18,28 @@ def artifacts(tmp_path_factory):
         "train_ids": json.loads((out / "train_ids.json").read_text()),
         "oof": pd.read_parquet(out / "oof.parquet"),
     }
+
+
+@pytest.fixture(scope="session")
+def fold_model_for(artifacts):
+    import joblib
+
+    oof = artifacts["oof"].set_index("EmployeeID")
+    cache = {}
+
+    def get(emp_id: int):
+        k = int(oof.loc[emp_id, "fold"])
+        if k not in cache:
+            cache[k] = joblib.load(artifacts["dir"] / f"fold_{k}.joblib")
+        return cache[k]
+
+    return get
+
+
+@pytest.fixture(scope="session")
+def row_for():
+    from ml.data import load_raw
+    from ml.features import FEATURES
+
+    df = load_raw().set_index("EmployeeID")
+    return lambda emp_id: df.loc[[emp_id], FEATURES]
