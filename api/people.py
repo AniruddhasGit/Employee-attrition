@@ -1,5 +1,7 @@
 """A person's current model inputs and score: IBM baseline, HR record overlay, latest check-in."""
 
+from datetime import datetime
+
 from sqlalchemy import select
 
 from api.models import CheckIn, Employee
@@ -13,14 +15,16 @@ def latest_checkin(db, employee_id: int) -> CheckIn | None:
 
 
 def current_features(db, e: Employee) -> dict:
-    """Baseline, then the HR record, then the latest check-in - unless HR changed the record
-    after that check-in, in which case the record (e.g. "overtime reduced") wins until the
-    person's next check-in says otherwise."""
+    """Baseline, then the HR record, then the latest check-in - except record fields HR changed
+    after that check-in (e.g. "overtime reduced"), which win until the next check-in."""
     latest = latest_checkin(db, e.employee_id)
     record = e.record or {}
-    if latest and record and e.record_at and e.record_at > latest.submitted_at:
-        return {**e.features, **latest.answers, **record}
-    return effective_features(e.features, record, latest.answers if latest else None)
+    if latest is None:
+        return effective_features(e.features, record, None)
+    times = e.record_times or {}
+    newer = {k: v for k, v in record.items()
+             if k in times and datetime.fromisoformat(times[k]) > latest.submitted_at}
+    return {**effective_features(e.features, record, latest.answers), **newer}
 
 
 def rescore(db, e: Employee) -> float:

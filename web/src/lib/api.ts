@@ -233,6 +233,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => null);
+  if (res.status === 401 && !path.startsWith("/api/auth/") && typeof window !== "undefined") {
+    // The session ended (expired, or the daily demo reset): go and sign in again, then come back.
+    const here = window.location.pathname + window.location.search;
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load is the point
+    window.location.assign(`/login?next=${encodeURIComponent(here)}`);
+  }
   if (!res.ok) {
     const detail = body?.detail;
     const message = typeof detail === "string" ? detail : "Something went wrong.";

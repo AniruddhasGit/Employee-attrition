@@ -143,3 +143,19 @@ def test_reset_regenerates_on_new_quarter(seeded):
         assert quarters == history(quarter_of(later.date()))
         assert len(demo.personas(s)) == 5
         demo.reset(s, date.today(), full=True)  # put the shared test DB back on today
+
+
+def test_reset_restores_a_resubmitted_seeded_checkin(seeded):
+    from api.checkins import submit_checkin
+
+    with SessionLocal() as s:
+        e = _persona(s, "stable")
+        row = next(c for c in _checkins(s, e.employee_id) if c.quarter == quarter_of(date.today()))
+        original = (dict(row.answers), list(row.keep_me), row.risk_score)
+        submit_checkin(s, e, {**row.answers, "WorkLifeBalance": 1}, ["pay"], "", date.today())
+        _stamp(s, 25)
+        assert demo.maybe_reset(s, datetime.now(UTC)) is True
+        row = next(c for c in _checkins(s, e.employee_id) if c.quarter == quarter_of(date.today()))
+        assert (row.answers, row.keep_me, row.risk_score) == original
+        assert row.seeded
+        assert abs(s.get(Employee, e.employee_id).risk_score - original[2]) < 1e-9

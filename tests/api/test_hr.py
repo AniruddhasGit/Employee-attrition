@@ -184,3 +184,27 @@ def test_seeded_plans_untouched_after_teardown(seeded):
     with SessionLocal() as s:
         assert all(p.status == p.seed_snapshot["status"]
                    for p in s.scalars(select(ActionPlan).where(ActionPlan.seeded)))
+
+
+def test_a_newer_checkin_outranks_older_plan_changes(client, seeded):
+    """Plan A done, then a check-in, then plan B done: plan A's field must not beat the check-in."""
+    from api.checkins import submit_checkin
+    from api.people import current_features
+
+    _as(client, "hr")
+    with SessionLocal() as s:
+        latest = s.scalars(select(CheckIn).where(CheckIn.quarter == quarter_of(date.today()))
+                           .order_by(CheckIn.employee_id)).all()
+        planned = set(s.scalars(select(ActionPlan.employee_id)))
+    eid = next(c.employee_id for c in latest
+               if c.answers["OverTime"] == "Yes" and c.employee_id not in planned)
+    a = client.post(f"/api/hr/people/{eid}/plans", json={"action": "reduce_overtime"}).json()
+    client.patch(f"/api/hr/plans/{a['id']}", json={"status": "done"})
+    with SessionLocal() as s:
+        e = s.get(Employee, eid)
+        answers = {**next(c for c in latest if c.employee_id == eid).answers, "OverTime": "Yes"}
+        submit_checkin(s, e, answers, [], "", date.today())
+    b = client.post(f"/api/hr/people/{eid}/plans", json={"action": "stay_interview"}).json()
+    client.patch(f"/api/hr/plans/{b['id']}", json={"status": "done"})
+    with SessionLocal() as s:
+        assert current_features(s, s.get(Employee, eid))["OverTime"] == "Yes"

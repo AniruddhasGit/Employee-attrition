@@ -35,8 +35,10 @@ def _me(user: User) -> Me:
 @router.post("/login", response_model=Me, response_model_by_alias=True)
 def login(body: LoginIn, request: Request, response: Response, db: SessionDep):
     email = body.email.strip().lower()
-    # Only failed attempts count: many prospects share one demo account.
-    keys = (f"login-ip:{client_ip(request)}", f"login-email:{email}")
+    # Only failed attempts count, keyed per IP and per (IP, email): demo emails are public and
+    # shared, so a global per-email lock would let one visitor lock everyone out.
+    ip = client_ip(request)
+    keys = (f"login-ip:{ip}", f"login-email:{ip}:{email}")
     if any(ratelimit.blocked(k, ATTEMPTS, WINDOW_S) for k in keys):
         raise HTTPException(429, "Too many failed sign-ins. Wait 15 minutes and sign in again.")
     demo.maybe_reset(db, datetime.now(UTC), allow_full=False)

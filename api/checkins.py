@@ -61,10 +61,17 @@ def submit_checkin(db, employee: Employee, answers: dict, keep_me: list[str], co
     row = db.scalars(select(CheckIn).where(CheckIn.employee_id == employee.employee_id,
                                            CheckIn.quarter == quarter)).first()
     if row is None:
-        row = CheckIn(employee_id=employee.employee_id, quarter=quarter)
+        row = CheckIn(employee_id=employee.employee_id, quarter=quarter, seeded=False)
         db.add(row)
+    elif row.seeded and row.seed_snapshot is None:
+        # A visitor re-answering a demo person's check-in: keep the original for the reset.
+        row.seed_snapshot = {
+            "answers": row.answers, "keep_me": row.keep_me, "comment": row.comment,
+            "risk_score": row.risk_score, "drivers": row.drivers,
+            "submitted_at": row.submitted_at.isoformat(),
+        }
     row.answers, row.keep_me, row.comment = answers, keep_me, comment
-    row.risk_score, row.drivers, row.seeded = p, drivers, False
+    row.risk_score, row.drivers = p, drivers
     row.submitted_at = datetime.now(UTC)
     employee.risk_score, employee.risk_band, employee.drivers = p, svc.band(p), drivers
     db.commit()

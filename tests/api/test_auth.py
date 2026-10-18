@@ -89,3 +89,17 @@ def test_successful_sign_ins_are_not_rate_limited(client, make_user):
     """Many prospects share one demo account; only failed attempts count toward the limit."""
     u = make_user("hr")
     assert all(login(client, u.email).status_code == 200 for _ in range(15))
+
+
+def test_wrong_passwords_from_one_ip_do_not_lock_out_others(client, make_user):
+    """Demo accounts are shared and their emails public: one visitor must not lock everyone out."""
+    u = make_user("hr")
+    attacker = {"x-forwarded-for": "198.51.100.66"}
+    for _ in range(10):
+        client.post("/api/auth/login", json={"email": u.email, "password": "wrong-pass"},
+                    headers=attacker)
+    assert client.post("/api/auth/login", json={"email": u.email, "password": "wrong-pass"},
+                       headers=attacker).status_code == 429
+    other = client.post("/api/auth/login", json={"email": u.email, "password": "pw-correct-horse"},
+                        headers={"x-forwarded-for": "203.0.113.10"})
+    assert other.status_code == 200

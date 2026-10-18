@@ -18,6 +18,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from api.db import Base
 
 Json = JSON().with_variant(JSONB(), "postgresql")
+# Python None stored as SQL NULL (not JSON null), so `IS NULL` filters work.
+NullableJson = JSON(none_as_null=True).with_variant(JSONB(none_as_null=True), "postgresql")
 
 
 class Employee(Base):
@@ -28,8 +30,9 @@ class Employee(Base):
     is_current: Mapped[bool] = mapped_column(Boolean, index=True, default=True)
     # HR record overlay: model inputs changed by completed action plans (e.g. a pay review).
     record: Mapped[dict] = mapped_column(Json, default=dict)
-    # When HR last changed the record; a newer change outranks an older check-in answer.
-    record_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When HR changed each record field (ISO time); a field changed after a check-in outranks
+    # that check-in's answer for the same field.
+    record_times: Mapped[dict] = mapped_column(Json, default=dict)
     department: Mapped[str] = mapped_column(String(64), index=True)
     job_role: Mapped[str] = mapped_column(String(64), index=True)
     job_level: Mapped[int]
@@ -106,6 +109,8 @@ class CheckIn(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     seeded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    # A seeded row a visitor re-submitted keeps its original here so the reset can put it back.
+    seed_snapshot: Mapped[dict | None] = mapped_column(NullableJson, nullable=True)
 
 
 class ActionPlan(Base):

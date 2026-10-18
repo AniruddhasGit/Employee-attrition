@@ -180,7 +180,7 @@ def _wipe(db) -> None:
     db.execute(delete(CheckIn))
     db.execute(delete(ActionPlan))
     db.execute(delete(TeamUpdate))
-    db.execute(update(Employee).values(record={}, record_at=None))
+    db.execute(update(Employee).values(record={}, record_times={}))
     db.flush()
 
 
@@ -407,7 +407,7 @@ def seed_history(db, today: date) -> None:
     db.execute(update(Employee), [
         {"employee_id": eid, "risk_score": float(p), "risk_band": svc.band(float(p)),
          "drivers": drv, "record": record_for(eid),
-         "record_at": done_at if record_for(eid) else None}
+         "record_times": {k: done_at.isoformat() for k in record_for(eid)}}
         for eid, p, drv in zip(ids, now_scores, now_drivers, strict=True)
     ])
     latest_q = {eid: cur if cur in answers[eid] else last for eid in ids}
@@ -452,6 +452,14 @@ def reset(db, today: date, full: bool = False) -> None:
     db.execute(delete(TeamUpdate).where(~TeamUpdate.seeded))
     db.execute(delete(UserSession))
 
+    for row in db.scalars(select(CheckIn).where(CheckIn.seed_snapshot.is_not(None))):
+        snap = row.seed_snapshot
+        row.answers, row.keep_me, row.comment = snap["answers"], snap["keep_me"], snap["comment"]
+        row.risk_score, row.drivers = snap["risk_score"], snap["drivers"]
+        row.submitted_at = datetime.fromisoformat(snap["submitted_at"])
+        row.seed_snapshot = None
+        touched.add(row.employee_id)
+
     for plan in db.scalars(select(ActionPlan).where(ActionPlan.seeded)):
         snap = plan.seed_snapshot or {}
         done_at = datetime.fromisoformat(snap["done_at"]) if snap.get("done_at") else None
@@ -470,14 +478,10 @@ def reset(db, today: date, full: bool = False) -> None:
                                    if e.features.get(k) != v}
     for e in db.scalars(select(Employee).where(Employee.is_current)):
         want = expected.get(e.employee_id, {})
-        if (e.record or {}) != want or (not want and e.record_at is not None):
-            e.record = want
+        want_times = {k: seeded_done_at.isoformat() for k in want}
+        if (e.record or {}) != want or (e.record_times or {}) != want_times:
+            e.record, e.record_times = want, want_times
             touched.add(e.employee_id)
-        if want and e.record_at != seeded_done_at:
-            e.record_at = seeded_done_at
-            touched.add(e.employee_id)
-        elif not want:
-            e.record_at = None
 
     for eid in touched:
         rescore(db, db.get(Employee, eid))

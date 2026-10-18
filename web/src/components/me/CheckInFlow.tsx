@@ -144,7 +144,7 @@ export function CheckInFlow() {
               ) : (
                 <>
                   <StepTitle id="q-keep">What would keep you here</StepTitle>
-                  <p className="mt-3 max-w-[52ch] text-muted">Pick up to three. HR sees these by team, so it knows what matters most.</p>
+                  <p className="mt-3 max-w-[52ch] text-muted">Pick up to three. HR sees these with your name, and adds them up by team to see what matters most.</p>
                   <div className="mt-8">
                     <KeepMePicker options={form.keepMeOptions} picks={picks} onPicks={setPicks} comment={comment} onComment={setComment} />
                   </div>

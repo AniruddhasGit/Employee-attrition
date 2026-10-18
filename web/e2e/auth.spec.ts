@@ -56,3 +56,22 @@ test("no page says Try", async ({ page }) => {
   await check("/me");
   await check("/me/check-in");
 });
+
+test("after signing out, another account can sign in and sees only its own area", async ({ page }) => {
+  await signInAs(page, "hr");
+  await page.getByRole("button", { name: /sign out/i }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await signInAs(page, "stable");
+  await expect(page.getByRole("link", { name: "Dashboard" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Check-in" })).toBeVisible();
+});
+
+test("an ended session sends the visitor to sign in instead of a dead error", async ({ page, context }) => {
+  await signInAs(page, "hr");
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await context.clearCookies();
+  // Any API call now gets a 401; the page must go to sign in, remembering where it was.
+  await page.getByRole("searchbox").first().fill("a");
+  await expect(page).toHaveURL(/\/login\?next=%2Fhr/);
+});

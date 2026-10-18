@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { SignOutIcon } from "@phosphor-icons/react";
 import { signOut } from "@/lib/api";
 import { useSession } from "@/lib/session";
@@ -23,14 +23,15 @@ const LINKS = {
 export function AppNav() {
   const state = useSession();
   const pathname = usePathname();
-  const router = useRouter();
   const session = state.status === "signed-in" ? state.session : null;
   const links = session ? LINKS[session.role] : [];
 
   async function onSignOut() {
     await signOut().catch(() => undefined);
-    router.replace("/login");
-    router.refresh();
+    // A full page load, not a client transition: nothing from this account's pages
+    // (kept alive by Next's back/forward cache) may survive into the next sign-in.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- a full load is the point
+    window.location.assign("/login");
   }
 
   return (

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ApiError, simulate } from "./api";
+import { ApiError, signIn, simulate } from "./api";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -27,5 +27,23 @@ describe("api client", () => {
   it("turns network failures into ApiError status 0", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
     await expect(simulate(1, {})).rejects.toMatchObject({ status: 0 });
+  });
+});
+
+describe("ended sessions", () => {
+  it("sends the visitor to sign in on a 401 from a signed-in area", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", { location: { pathname: "/hr/people/7", search: "", assign } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Please sign in." }), { status: 401 })));
+    await expect(simulate(7, {})).rejects.toMatchObject({ status: 401 });
+    expect(assign).toHaveBeenCalledWith("/login?next=%2Fhr%2Fpeople%2F7");
+  });
+
+  it("does not redirect for the sign-in call itself", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", { location: { pathname: "/login", search: "", assign } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Email or password is wrong." }), { status: 401 })));
+    await expect(signIn("a@b.c", "x")).rejects.toMatchObject({ status: 401 });
+    expect(assign).not.toHaveBeenCalled();
   });
 });

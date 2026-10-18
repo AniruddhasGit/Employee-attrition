@@ -3,7 +3,7 @@
 import { ArrowRightIcon, CircleNotchIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { ApiError, getDemoAccounts, signIn, type DemoAccount, type Session } from "@/lib/api";
 import { EASE_OUT } from "@/lib/motion";
 import { useSession } from "@/lib/session";
@@ -30,6 +30,15 @@ export function LoginForm() {
     if (state.status === "signed-in") router.replace(destination(state.session, next));
   }, [state, router, next]);
 
+  // Next keeps this page alive while hidden; clear in-flight state so it never comes back frozen.
+  useLayoutEffect(
+    () => () => {
+      setBusy(null);
+      setError(null);
+    },
+    [],
+  );
+
   useEffect(() => {
     getDemoAccounts()
       .then(setAccounts)
@@ -41,7 +50,9 @@ export function LoginForm() {
     setError(null);
     try {
       const session = await signIn(addr, pass);
-      router.replace(destination(session, next));
+      // Full page load into the signed-in area, so no state from an earlier account survives.
+       
+      window.location.assign(destination(session, next));
     } catch (err) {
       setBusy(null);
       if (err instanceof ApiError && (err.status === 0 || err.status === 502)) {

@@ -160,9 +160,10 @@ def finish_plan(plan_id: int, body: PlanPatch, user: HrUser, db: SessionDep) -> 
     if plan.status != "done":
         feats = current_features(db, e)
         changed = {k: v for k, v in apply_action(feats, plan.action).items() if feats[k] != v}
+        now = datetime.now(UTC)
         e.record = {**(e.record or {}), **changed}
-        e.record_at = datetime.now(UTC)
-        plan.status, plan.done_at = "done", e.record_at
+        e.record_times = {**(e.record_times or {}), **{k: now.isoformat() for k in changed}}
+        plan.status, plan.done_at = "done", now
         rescore(db, e)
         db.commit()
     return _plan_out(plan, _checkins(db, e.employee_id))
