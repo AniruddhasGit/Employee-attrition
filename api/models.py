@@ -28,6 +28,8 @@ class Employee(Base):
     is_current: Mapped[bool] = mapped_column(Boolean, index=True, default=True)
     # HR record overlay: model inputs changed by completed action plans (e.g. a pay review).
     record: Mapped[dict] = mapped_column(Json, default=dict)
+    # When HR last changed the record; a newer change outranks an older check-in answer.
+    record_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     department: Mapped[str] = mapped_column(String(64), index=True)
     job_role: Mapped[str] = mapped_column(String(64), index=True)
     job_level: Mapped[int]

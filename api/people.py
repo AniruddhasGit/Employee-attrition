@@ -13,8 +13,14 @@ def latest_checkin(db, employee_id: int) -> CheckIn | None:
 
 
 def current_features(db, e: Employee) -> dict:
+    """Baseline, then the HR record, then the latest check-in - unless HR changed the record
+    after that check-in, in which case the record (e.g. "overtime reduced") wins until the
+    person's next check-in says otherwise."""
     latest = latest_checkin(db, e.employee_id)
-    return effective_features(e.features, e.record or {}, latest.answers if latest else None)
+    record = e.record or {}
+    if latest and record and e.record_at and e.record_at > latest.submitted_at:
+        return {**e.features, **latest.answers, **record}
+    return effective_features(e.features, record, latest.answers if latest else None)
 
 
 def rescore(db, e: Employee) -> float:

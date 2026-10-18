@@ -35,11 +35,10 @@ def health(session: SessionDep) -> dict:
     return {"status": "ok", "db": db_ok, "model_version": version}
 
 
-from api.routes import auth, contact, employees, me, model, workforce  # noqa: E402
+from api.routes import auth, contact, hr, hr_people, me  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(me.router)
-app.include_router(employees.router)
-app.include_router(model.router)
-app.include_router(workforce.router)
+app.include_router(hr.router)
+app.include_router(hr_people.router)
 app.include_router(contact.router)

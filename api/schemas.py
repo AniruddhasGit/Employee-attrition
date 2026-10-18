@@ -23,7 +23,7 @@ class Levers(CamelModel):
     """The only inputs a visitor may change. Protected attributes are never levers."""
 
     over_time: Literal["Yes", "No"] | None = None
-    monthly_income: int | None = Field(None, ge=1000, le=20000)
+    monthly_income: int | None = Field(None, ge=1000, le=25000)
     stock_option_level: int | None = Field(None, ge=0, le=3)
     job_level: int | None = Field(None, ge=1, le=5)
     training_times_last_year: int | None = Field(None, ge=0, le=6)
@@ -46,28 +46,6 @@ def _column(field_name: str) -> str:
 
 
 LEVER_FEATURES = [_column(k) for k in Levers.model_fields]
-
-
-class EmployeeCard(CamelModel):
-    id: int
-    department: str
-    job_role: str
-    job_level: int
-    years_at_company: int
-    monthly_income: int
-    over_time: str
-    risk_score: float
-    risk_band: Band
-    drivers: list[Driver]
-
-
-class EmployeeDetail(EmployeeCard):
-    levers: Levers
-
-
-class EmployeePage(CamelModel):
-    items: list[EmployeeCard]
-    total: int
 
 
 class SimulateIn(CamelModel):

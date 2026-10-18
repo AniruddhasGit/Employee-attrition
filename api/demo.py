@@ -180,7 +180,7 @@ def _wipe(db) -> None:
     db.execute(delete(CheckIn))
     db.execute(delete(ActionPlan))
     db.execute(delete(TeamUpdate))
-    db.execute(update(Employee).values(record={}))
+    db.execute(update(Employee).values(record={}, record_at=None))
     db.flush()
 
 
@@ -392,13 +392,18 @@ def seed_history(db, today: date) -> None:
 
     # Current scores and drivers for everyone, from their latest inputs.
     latest = {eid: answers[eid][cur] if cur in answers[eid] else answers[eid][last] for eid in ids}
-    now_items = [(eid, latest[eid], record_for(eid)) for eid in ids]
+    # Plans were finished after last quarter's check-in, so for people who haven't answered
+    # this quarter the record outranks those older answers (see people.current_features).
+    now_items = [(eid, latest[eid] if cur in answers[eid]
+                  else {k: record_for(eid).get(k, v) for k, v in latest[eid].items()},
+                  record_for(eid)) for eid in ids]
     now_frame = scorer.frame(now_items)
     now_scores = svc.score_frame(now_frame)
     now_drivers = svc.drivers_frame(now_frame)
     db.execute(update(Employee), [
         {"employee_id": eid, "risk_score": float(p), "risk_band": svc.band(float(p)),
-         "drivers": drv, "record": record_for(eid)}
+         "drivers": drv, "record": record_for(eid),
+         "record_at": done_at if record_for(eid) else None}
         for eid, p, drv in zip(ids, now_scores, now_drivers, strict=True)
     ])
     latest_q = {eid: cur if cur in answers[eid] else last for eid in ids}
@@ -452,16 +457,23 @@ def reset(db, today: date, full: bool = False) -> None:
             touched.add(plan.employee_id)
 
     expected: dict[int, dict] = {}
+    seeded_done_at = None
     for plan in db.scalars(select(ActionPlan).where(ActionPlan.seeded,
                                                     ActionPlan.status == "done")):
+        seeded_done_at = plan.done_at
         e = db.get(Employee, plan.employee_id)
         expected[e.employee_id] = {k: v for k, v in apply_action(e.features, plan.action).items()
                                    if e.features.get(k) != v}
     for e in db.scalars(select(Employee).where(Employee.is_current)):
         want = expected.get(e.employee_id, {})
-        if (e.record or {}) != want:
+        if (e.record or {}) != want or (not want and e.record_at is not None):
             e.record = want
             touched.add(e.employee_id)
+        if want and e.record_at != seeded_done_at:
+            e.record_at = seeded_done_at
+            touched.add(e.employee_id)
+        elif not want:
+            e.record_at = None
 
     for eid in touched:
         rescore(db, db.get(Employee, eid))
