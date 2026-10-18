@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+import { Home } from "@/components/me/Home";
+
+export const metadata: Metadata = { title: "Your home" };
+
 export default function Page() {
-  return <div className="mx-auto max-w-[1400px] px-4 pt-28 md:px-8"><h1 className="text-4xl font-semibold">Your home</h1></div>;
+  return <Home />;
 }

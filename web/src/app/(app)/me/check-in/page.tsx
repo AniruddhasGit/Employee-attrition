@@ -1,3 +1,8 @@
+import type { Metadata } from "next";
+import { CheckInFlow } from "@/components/me/CheckInFlow";
+
+export const metadata: Metadata = { title: "Check-in" };
+
 export default function Page() {
-  return <div className="mx-auto max-w-[1400px] px-4 pt-28 md:px-8"><h1 className="text-4xl font-semibold">Check-in</h1></div>;
+  return <CheckInFlow />;
 }
