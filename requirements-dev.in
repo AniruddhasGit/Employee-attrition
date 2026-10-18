@@ -3,3 +3,4 @@ ruff
 nbconvert
 ipykernel
 matplotlib
+httpx2

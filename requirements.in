@@ -6,3 +6,10 @@ xgboost
 shap
 joblib
 pyarrow
+fastapi
+uvicorn[standard]
+sqlalchemy
+alembic
+psycopg[binary]
+pydantic-settings
+email-validator

@@ -19,4 +19,18 @@ lint:
 notebook:
 	$(PY) -m jupyter nbconvert --to notebook --execute notebooks/attrition.ipynb --inplace
 
-.PHONY: setup train test lint notebook
+ALEMBIC = $(PY) -m alembic -c api/alembic.ini
+
+db-up:
+	docker compose up -d db
+
+migrate:
+	$(ALEMBIC) upgrade head
+
+seed:
+	$(PY) -m api.seed
+
+api:
+	$(PY) -m uvicorn api.main:app --reload --port 8010
+
+.PHONY: setup train test lint notebook db-up migrate seed api
