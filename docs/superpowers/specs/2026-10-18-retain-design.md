@@ -199,8 +199,8 @@ docker-compose.yml, .env.example, Makefile/scripts, README.md, LICENSE (MIT)
 - **Existing root files** (builder's call, nothing deleted): `git mv` the original notebook to
   `notebooks/original.ipynb` unchanged (it is the source of the "before" numbers); the cleaned
   notebook becomes `notebooks/attrition.ipynb`; the report moves to `docs/`; both CSVs move to
-  `data/raw/`. `employee_attrition_test_demo.csv` becomes the API test fixture for scoring
-  unseen rows with the refit model.
+  `data/raw/`. `employee_attrition_test_demo.csv` (renamed `demo_sample.csv`) turned out to be 20 copies of dataset rows, so it is only a format fixture; never present its refit scores as
+  out-of-sample (`ml.score.in_training` detects this).
 - No pushing to GitHub and no remote creation without the owner's go-ahead.
 
 ## Left to the builder

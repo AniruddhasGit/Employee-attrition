@@ -40,3 +40,19 @@ def test_score_demo_csv(artifacts):
 def test_artifacts_fit_free_hosting_budget(artifacts):
     total = sum(f.stat().st_size for f in artifacts["dir"].iterdir())
     assert total < 50 * 1024 * 1024
+
+
+def test_demo_rows_are_flagged_as_training_rows():
+    from ml.score import in_training
+
+    flags = in_training(pd.read_csv(DEMO_CSV))
+    assert len(flags) == 20 and flags.all()
+
+
+def test_explainers_live_on_the_model_not_a_global_cache(fold_model_for, row_for):
+    import ml.explain as explain
+
+    model = fold_model_for(1001)
+    top_drivers(model, row_for(1001))
+    assert not hasattr(explain, "_explainers")
+    assert len(model._retain_explainers) == len(model.calibrated_classifiers_)

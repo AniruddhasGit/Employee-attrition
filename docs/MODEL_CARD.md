@@ -36,28 +36,39 @@ tenure and promotion history, training, work-life balance.
    employees, so each person is scored by a model that never saw them. The what-if simulator
    uses that same fold model. A model refit on all rows is kept only for scoring new rows.
 
-## Results on the held-out test set
+## Results
 
-| Metric | Before (original notebook) | After (held-out) | 95% CI |
+| Metric | Before: original predictor, in-sample, 1,470 rows, cut-off 0.9 | After: held-out, 294 rows, cut-off 0.282 | 95% CI (after) |
 |---|---|---|---|
-| ROC-AUC | 1.000 | **0.790** | 0.706 – 0.867 |
-| PR-AUC | 1.000 | **0.547** | 0.409 – 0.692 |
-| Precision | 1.000 | **0.488** | 0.333 – 0.633 |
-| Recall | 0.439 | **0.447** | 0.302 – 0.595 |
-| F1 | 0.610 | **0.467** | 0.328 – 0.593 |
-| Accuracy | 0.909 | **0.837** | 0.792 – 0.881 |
-| Brier score | 0.009 | **0.101** | 0.075 – 0.126 |
+| ROC-AUC | 0.964 | **0.790** | 0.706 – 0.867 |
+| PR-AUC | 0.840 | **0.547** | 0.409 – 0.692 |
+| Precision | 0.438 | **0.488** | 0.333 – 0.633 |
+| Recall | 0.983 | **0.447** | 0.302 – 0.595 |
+| F1 | 0.606 | **0.467** | 0.328 – 0.593 |
+| Accuracy | 0.794 | **0.837** | 0.792 – 0.881 |
+| Brier score | 0.439 | **0.101** | 0.075 – 0.126 |
 
-The intervals are wide because only 47 people in the test set left.
+On the test set the honest model flags 43 of 294 employees and catches 21 of the 47 who left.
+The intervals are wide because only 47 test employees left.
 
-### Why the "before" numbers were wrong
+### What was wrong with the original
 
-1. **Leakage.** The original model was trained and scored on the same rows, so it was graded on
-   answers it had memorised. That is why its ROC-AUC was 1.000.
+The original notebook never printed any metrics. The "before" column re-runs its own
+`predict_attrition_by_id` logic on every employee (`ml.evaluate.before_scores`), bugs included:
+
+1. **Leakage.** It was trained and scored on the same rows, so its ranking (ROC-AUC 0.964) is
+   inflated.
 2. **No hold-out.** Its evaluation cell was commented out, and it had a bug: it built `xgb_live`
    but fitted `xgb_eval`.
-3. **Arbitrary threshold.** It used a hand-picked 0.9 cut-off and printed P(leave) as
-   "confidence". As a result, 89% likely to leave was reported as "Likely to Stay".
+3. **Broken single-row encoding.** `get_dummies(drop_first=True)` on one row drops every
+   category's only dummy, so overtime, job role, department, travel and education field all
+   reached the model as zero. Its probabilities were badly off (Brier 0.439), and at its 0.9
+   cut-off it flagged 532 of 1,470 employees.
+4. **Arbitrary threshold and labelling.** The hand-picked 0.9 cut-off was reported as
+   "confidence", so an 89% chance of leaving was printed as "Likely to Stay".
+
+Re-running it with today's library versions gives employee 1004 a score of 0.84; the notebook
+printed 0.89. The gap comes from library version changes and does not change the conclusions.
 
 ## Fairness check (out-of-fold scores, threshold 0.282)
 
@@ -80,4 +91,5 @@ have to investigate this before relying on it.
 - Not for decisions about individual people. Use it, at most, to look at patterns across groups.
 - One random split. The test set is small, so the metrics are noisy (see the intervals above).
 
-Reproduce: `make setup && make train`. Every number above comes from `models/metrics.json`.
+Reproduce: `make setup && make train`. Every metric above comes from `models/metrics.json`.
+The dataset counts (1,470 employees, 237 leavers) come from the CSV, and the 0.89 comes from the original notebook's saved output.

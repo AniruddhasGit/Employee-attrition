@@ -53,18 +53,17 @@ PLAIN: dict[str, Callable[[object], str]] = {
     "YearsWithCurrManager": _years("Time with current manager"),
 }
 
-_explainers: dict[int, list[tuple]] = {}
-
-
 def _parts(model) -> list[tuple]:
-    """(encoder, TreeExplainer) for each inner model of the calibrated ensemble, built once."""
-    key = id(model)
-    if key not in _explainers:
-        _explainers[key] = [
+    """(encoder, TreeExplainer) for each inner model of the calibrated ensemble.
+
+    Built once and stored on the model itself, so explainers live and die with their model.
+    """
+    if not hasattr(model, "_retain_explainers"):
+        model._retain_explainers = [
             (cc.estimator["enc"], shap.TreeExplainer(cc.estimator["xgb"]))
             for cc in model.calibrated_classifiers_
         ]
-    return _explainers[key]
+    return model._retain_explainers
 
 
 def _origin(name: str) -> str:
@@ -75,7 +74,11 @@ def _origin(name: str) -> str:
 
 
 def shap_by_feature(model, X: pd.DataFrame) -> pd.DataFrame:
-    """Signed SHAP (log-odds) per original column, averaged over the ensemble's inner models."""
+    """Signed SHAP per original column, averaged over the ensemble's inner models.
+
+    Values are on the raw XGBoost log-odds scale, before isotonic calibration, so they rank
+    drivers and give their direction; they do not add up to the calibrated risk score.
+    """
     total = None
     for enc, explainer in _parts(model):
         values = explainer.shap_values(enc.transform(X[FEATURES]))

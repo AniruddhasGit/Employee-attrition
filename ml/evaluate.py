@@ -57,14 +57,29 @@ def bootstrap_ci(y_true, proba, threshold: float, n: int = 1000, seed: int = RAN
     }
 
 
-def before_metrics(df: pd.DataFrame) -> dict:
-    """Reproduce the original notebook exactly: every column, SMOTE on all rows, fit on all rows,
-    then score those same rows at the hard-coded 0.9 threshold (in-sample, so leaky)."""
+def before_scores(df: pd.DataFrame) -> pd.Series:
+    """Re-run the original notebook's predictor on every employee, bugs included.
+
+    It used every column (protected ones too), applied SMOTE to all rows, fitted on all rows
+    with default n_jobs, and then scored the same rows one at a time. Its per-row
+    get_dummies(drop_first=True) drops the only dummy of each category, so after reindexing
+    every categorical feature (overtime, job role, ...) reached the model as 0.
+    """
     X = pd.get_dummies(df.drop(columns=["Attrition", "EmployeeID"]), drop_first=True)
     y = df["Attrition"]
     X_bal, y_bal = SMOTE(random_state=RANDOM_STATE).fit_resample(X, y)
-    model = XGBClassifier(**BASELINE_PARAMS).fit(X_bal, y_bal)
-    return metrics_at(y, model.predict_proba(X)[:, 1], 0.9)
+    params = {k: v for k, v in BASELINE_PARAMS.items() if k != "n_jobs"}
+    model = XGBClassifier(**params).fit(X_bal, y_bal)
+    dummies = [c for c in X.columns if X[c].dtype == bool]
+    X_as_scored = X.copy()
+    X_as_scored[dummies] = False
+    return pd.Series(model.predict_proba(X_as_scored)[:, 1], index=df["EmployeeID"])
+
+
+def before_metrics(df: pd.DataFrame) -> dict:
+    """What the original notebook would have reported had it measured itself: its own predictor,
+    on the rows it was trained on, at its hard-coded 0.9 cut-off. It never printed these."""
+    return metrics_at(df["Attrition"], before_scores(df).to_numpy(), 0.9)
 
 
 def threshold_curve(y_true, proba) -> list[dict]:

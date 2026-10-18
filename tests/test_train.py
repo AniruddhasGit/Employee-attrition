@@ -12,7 +12,8 @@ def test_metrics_shape(artifacts):
     m = artifacts["metrics"]
     assert 0.5 < m["after"]["roc_auc"] <= 1
     assert 0 < m["threshold"] < 1
-    assert m["before"]["accuracy"] > m["after"]["accuracy"]  # leakage inflates the old numbers
+    assert m["before"]["roc_auc"] > m["after"]["roc_auc"]  # graded on rows it trained on
+    assert m["before"]["precision"] < m["after"]["precision"]  # zeroed categories over-flag
     for k, (lo, hi) in m["after"]["ci"].items():
         assert lo <= hi, k
     assert m["n_test_pos"] > 0
@@ -35,3 +36,12 @@ def test_fold_and_refit_models_saved(artifacts):
 def test_before_metrics_deterministic():
     df = load_raw()
     assert before_metrics(df) == before_metrics(df)
+
+
+def test_before_reproduces_original_single_row_scoring():
+    # The original notebook printed P(leave) = 0.8924592 for employee 1004 via
+    # predict_attrition_by_id, whose per-row get_dummies(drop_first=True) zeroed every category.
+    from ml.evaluate import before_scores
+
+    scores = before_scores(load_raw())
+    assert abs(scores.loc[1004] - 0.8925) < 0.06  # library versions drift (xgboost 3.x)
