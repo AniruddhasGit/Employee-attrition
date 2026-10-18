@@ -4,7 +4,7 @@ from sqlalchemy import select
 
 from api import demo
 from api.db import SessionLocal
-from api.models import ActionPlan, Employee
+from api.models import ActionPlan, CheckIn, Employee
 from api.quarters import quarter_of
 from tests.api.conftest import login
 
@@ -112,7 +112,12 @@ def test_plan_done_applies_lever(client, seeded):
 def test_reduce_overtime_done_beats_older_checkin(client, seeded):
     """A plan finished after the latest check-in changes today's score at once."""
     _as(client, "hr")
-    eid = _persona("sharp_drop")["employee_id"]
+    with SessionLocal() as s:
+        latest = s.scalars(select(CheckIn).where(CheckIn.quarter == quarter_of(date.today()))
+                           .order_by(CheckIn.employee_id)).all()
+        planned = set(s.scalars(select(ActionPlan.employee_id)))
+    eid = next(c.employee_id for c in latest
+               if c.answers["OverTime"] == "Yes" and c.employee_id not in planned)
     assert client.get(f"/api/hr/people/{eid}").json()["levers"]["overTime"] == "Yes"
     plan = client.post(f"/api/hr/people/{eid}/plans", json={"action": "reduce_overtime"}).json()
     client.patch(f"/api/hr/plans/{plan['id']}", json={"status": "done"})

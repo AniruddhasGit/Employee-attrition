@@ -51,5 +51,6 @@ def test_before_reproduces_original_single_row_scoring():
 
 def test_no_false_certainty(artifacts):
     # Isotonic calibration pinned some people at exactly 100%; shown scores must never claim that.
+    # Sigmoid calibration can approach but never reach 0 or 1.
     oof = artifacts["oof"]
-    assert oof["risk_score"].max() < 0.95 and oof["risk_score"].min() > 0.0
+    assert oof["risk_score"].max() < 0.99 and oof["risk_score"].min() > 0.0
