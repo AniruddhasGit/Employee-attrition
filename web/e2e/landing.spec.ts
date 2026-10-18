@@ -10,21 +10,17 @@ test("hero shows headline, feature index and primary CTA", async ({ page }) => {
 });
 
 test("before/after story moves from the leaky numbers to the honest ones", async ({ page }) => {
+  const { metrics: m } = await (await page.request.get("http://localhost:8010/api/public/summary")).json();
   await page.goto("/");
   const story = page.getByTestId("before-after");
-  // Section top at the viewport top = start of the scroll story (progress 0).
-  await page.evaluate(() => {
-    const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;
-    window.scrollTo(0, el.offsetTop);
-  });
-  const { metrics: m } = await (await page.request.get("http://localhost:8010/api/public/summary")).json();
-  await expect(story).toContainText(m.before.roc_auc.toFixed(3));
-  await page.evaluate(() => {
-    const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;
-    window.scrollTo(0, el.offsetTop + el.offsetHeight - window.innerHeight);
-  });
+  const slider = story.getByRole("slider", { name: "Compare the original notebook with the honest model" });
+  await slider.press("End");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Honest model");
   await expect(story).toContainText(m.after.roc_auc.toFixed(3));
   await expect(story).toContainText(/zeroed/i);
+  await slider.press("Home");
+  await expect(slider).toHaveAttribute("aria-valuetext", "Original notebook");
+  await expect(story).toContainText(m.before.roc_auc.toFixed(3));
 });
 
 test("no horizontal scroll on a phone", async ({ page }) => {
