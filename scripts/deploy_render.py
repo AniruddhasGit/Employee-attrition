@@ -4,7 +4,7 @@ Usage (PowerShell or bash; secrets stay in your shell, never in the repo):
     RENDER_API_KEY=... DATABASE_URL=... python scripts/deploy_render.py
 
 Re-runnable: existing services are found by name and only their env vars are updated.
-Requires Render to have access to the GitHub repo (public repo, or Render's GitHub app granted access).
+Needs Render access to the GitHub repo (public repo, or Render's GitHub app granted access).
 """
 
 import json
