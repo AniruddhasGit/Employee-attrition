@@ -9,3 +9,6 @@ web
 notebooks
 docs
 .env
+.env.*
+!.env.example
+.playwright-mcp

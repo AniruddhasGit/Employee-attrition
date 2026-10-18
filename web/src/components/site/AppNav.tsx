@@ -35,7 +35,7 @@ export function AppNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
-      <nav aria-label="Main" className="mx-auto flex h-16 max-w-[1400px] items-center gap-6 px-4 md:px-8">
+      <nav aria-label="Main" className="mx-auto flex h-16 max-w-[1400px] items-center gap-3 px-4 sm:gap-6 md:px-8">
         <Link href={session?.home ?? "/"} className="flex items-center gap-2 text-sm font-semibold tracking-tight">
           <Logo />
           {SITE.name}
@@ -49,7 +49,7 @@ export function AppNav() {
                 <Link
                   href={l.href}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-full px-3 py-1.5 transition-colors duration-150 ${active ? "bg-ink text-bg" : "text-ink-soft hover:bg-surface hover:text-ink"}`}
+                  className={`whitespace-nowrap rounded-full px-3 py-1.5 transition-colors duration-150 ${active ? "bg-ink text-bg" : "text-ink-soft hover:bg-surface hover:text-ink"}`}
                 >
                   {l.label}
                 </Link>
@@ -62,9 +62,10 @@ export function AppNav() {
           <button
             type="button"
             onClick={onSignOut}
-            className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 transition-transform duration-150 ease-out hover:bg-surface active:scale-[0.97]"
+            aria-label="Sign out"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 py-1.5 transition-transform duration-150 ease-out hover:bg-surface active:scale-[0.97]"
           >
-            <SignOutIcon size={14} /> Sign out
+            <SignOutIcon size={14} /> <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </nav>

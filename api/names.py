@@ -21,6 +21,15 @@ LAST = [
 ]
 
 
-def name_for(employee_id: int) -> str:
-    rng = random.Random(employee_id * 7919 + 17)
-    return f"{rng.choice(FIRST)} {rng.choice(LAST)}"
+def unique_names(employee_ids: list[int]) -> dict[int, str]:
+    """A distinct name per employee (60 x 60 combinations), so HR can search by name."""
+    taken: set[str] = set()
+    out: dict[int, str] = {}
+    for eid in sorted(employee_ids):
+        rng = random.Random(eid * 7919 + 17)
+        name = f"{rng.choice(FIRST)} {rng.choice(LAST)}"
+        while name in taken:
+            name = f"{rng.choice(FIRST)} {rng.choice(LAST)}"
+        taken.add(name)
+        out[eid] = name
+    return out

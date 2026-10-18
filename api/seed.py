@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from api import demo
 from api.models import DemoState, Employee, ModelRun
-from api.names import name_for
+from api.names import unique_names
 from api.quarters import quarter_of
 from api.service import ModelService
 from api.settings import get_settings
@@ -46,10 +46,11 @@ def run(session: Session, models_dir: Path, force: bool = False) -> int:
     drivers = pd.read_parquet(models_dir / "drivers.parquet")
     df = df.merge(oof, on="EmployeeID").merge(drivers, on="EmployeeID")
 
+    names = unique_names([int(i) for i in df["EmployeeID"]])
     rows = [
         {
             "employee_id": int(r["EmployeeID"]),
-            "name": name_for(int(r["EmployeeID"])),
+            "name": names[int(r["EmployeeID"])],
             "is_current": int(r["Attrition"]) == 0,
             "record": {},
             "department": r["Department"],
