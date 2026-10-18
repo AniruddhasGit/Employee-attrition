@@ -1,16 +1,30 @@
 import json
+from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 
 from api.auth import require_same_origin
-from api.db import SessionDep
+from api.db import SessionDep, SessionLocal
 from api.settings import get_settings
 
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Clear yesterday's visitor edits when a sleeping free instance wakes up."""
+    from api import demo
+
+    with SessionLocal() as db:
+        demo.maybe_reset(db, datetime.now(UTC), allow_full=False)
+    yield
+
 # Browsers reach the API only through the web app's same-origin proxy, so there is no CORS.
 # Every state-changing request must carry the site's own Origin (CSRF guard).
-app = FastAPI(title="Retain API", version="1.0.0", dependencies=[Depends(require_same_origin)])
+app = FastAPI(title="Retain API", version="1.0.0", lifespan=lifespan,
+              dependencies=[Depends(require_same_origin)])
 
 
 @app.get("/api/health")

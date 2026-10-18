@@ -39,7 +39,7 @@ def login(body: LoginIn, request: Request, response: Response, db: SessionDep):
     email_ok = ratelimit.allow(f"login-email:{email}", ATTEMPTS, WINDOW_S)
     if not (ip_ok and email_ok):
         raise HTTPException(429, "Too many sign-in attempts. Wait 15 minutes and sign in again.")
-    demo.maybe_reset(db, datetime.now(UTC))
+    demo.maybe_reset(db, datetime.now(UTC), allow_full=False)
     user = db.scalars(select(User).where(func.lower(User.email) == email)).first()
     if not verify_password(user.password_hash if user else None, body.password):
         raise HTTPException(401, "Email or password is wrong.")

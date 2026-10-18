@@ -31,10 +31,11 @@ def client():
     with TestClient(app, headers={"Origin": "http://localhost:3000"}) as c:
         yield c
     with engine.begin() as conn:
-        conn.execute(text(
-            "TRUNCATE sessions, check_ins, action_plans, team_updates, contact_messages"
-            " RESTART IDENTITY CASCADE"
-        ))
+        # Keep the seeded demo history; drop only what the test itself created.
+        conn.execute(text("DELETE FROM sessions"))
+        for table in ("check_ins", "action_plans", "team_updates"):
+            conn.execute(text(f"DELETE FROM {table} WHERE NOT seeded"))
+        conn.execute(text("TRUNCATE contact_messages RESTART IDENTITY"))
 
 
 @pytest.fixture(scope="session")

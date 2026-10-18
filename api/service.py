@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 from api.settings import get_settings
-from ml.explain import top_drivers
+from ml.explain import drivers_from_shap, shap_by_feature, top_drivers
 from ml.features import FEATURES
 
 ELEVATED_FRACTION = 0.6  # "elevated" starts at 60% of the decision threshold
@@ -51,6 +51,18 @@ class ModelService:
         for k in np.unique(folds):
             mask = folds == k
             out[mask] = self.fold_model(int(k)).predict_proba(df.loc[mask, FEATURES])[:, 1]
+        return out
+
+    def drivers_frame(self, df: pd.DataFrame) -> list[list[dict]]:
+        """Top-5 drivers for many rows, one SHAP pass per fold model, original order."""
+        out: list[list[dict]] = [[] for _ in range(len(df))]
+        folds = df["fold"].to_numpy()
+        for k in np.unique(folds):
+            idx = np.flatnonzero(folds == k)
+            X = df.iloc[idx][FEATURES].reset_index(drop=True)
+            impacts = shap_by_feature(self.fold_model(int(k)), X)
+            for j, i in enumerate(idx):
+                out[i] = drivers_from_shap(X.iloc[j], impacts.iloc[j])
         return out
 
     def drivers_for(self, features: dict, fold: int) -> list[dict]:
