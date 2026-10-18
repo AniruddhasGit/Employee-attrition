@@ -1,7 +1,8 @@
 """Create or update the two Render services (free plan) and wire them together.
 
-Usage (PowerShell or bash; secrets stay in your shell, never in the repo):
+Usage (secrets stay in your shell or a git-ignored .env.deploy, never in the repo):
     RENDER_API_KEY=... DATABASE_URL=... python scripts/deploy_render.py
+or put both KEY=value lines in .env.deploy at the repo root and run it with no variables.
 
 Re-runnable: existing services are found by name and only their env vars are updated.
 Needs Render access to the GitHub repo (public repo, or Render's GitHub app granted access).
@@ -14,6 +15,14 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env.deploy"
+if ENV_FILE.exists():
+    for line in ENV_FILE.read_text(encoding="utf-8-sig").splitlines():
+        key, sep, value = line.strip().partition("=")
+        if sep and not key.startswith("#"):
+            os.environ.setdefault(key.strip(), value.strip().strip("'\""))
 
 REPO = "https://github.com/AniruddhasGit/Employee-attrition"
 BRANCH = "main"
