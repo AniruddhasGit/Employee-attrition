@@ -10,10 +10,14 @@ import { TipRow, Tooltip } from "@/components/charts/Tooltip";
 
 type Cell = HeatCell;
 
-/** Department rows, role cells; colour = average risk on a one-hue ramp. Hover for detail. */
+/**
+ * Department rows, role cells; colour = average risk on a one-hue ramp. Hover for detail.
+ * The same numbers are one click away as a plain table.
+ */
 export function Heatmap({ cells }: { cells: Cell[] }) {
   const reduce = useReducedMotion();
   const [tip, setTip] = useState<{ cell: Cell; x: number; y: number } | null>(null);
+  const [asTable, setAsTable] = useState(false);
   const max = Math.max(...cells.map((c) => c.meanRisk));
   const domainMax = Math.ceil(max * 20) / 20; // round up to the next 5%
   const departments = [...new Set(cells.map((c) => c.department))];
@@ -51,7 +55,7 @@ export function Heatmap({ cells }: { cells: Cell[] }) {
                         setTip({ cell: c, x: r.left - box.left + r.width / 2, y: r.top - box.top });
                       }}
                       onBlur={() => setTip(null)}
-                      className="flex min-h-24 cursor-default flex-col justify-between rounded-[4px] p-3 outline-offset-2 first:rounded-l-xl last:rounded-r-xl"
+                      className="flex min-h-24 cursor-default flex-col justify-between rounded-lg p-3 outline-offset-2"
                       style={{ background: seqColor(t), color: seqInk(t) }}
                     >
                       <span className="text-sm leading-tight">{c.jobRole}</span>
@@ -68,15 +72,52 @@ export function Heatmap({ cells }: { cells: Cell[] }) {
         })}
       </div>
 
-      <div className="mt-6 flex items-center gap-3 text-xs text-muted" aria-hidden>
-        <span>0%</span>
-        <span className="flex h-2 w-40 overflow-hidden rounded-full">
-          {Array.from({ length: 7 }, (_, i) => (
-            <span key={i} className="flex-1" style={{ background: `var(--seq-${i})` }} />
-          ))}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-muted">
+        <span className="flex items-center gap-3" aria-hidden>
+          <span>0%</span>
+          <span className="flex h-2 w-40 overflow-hidden rounded-full">
+            {Array.from({ length: 7 }, (_, i) => (
+              <span key={i} className="flex-1" style={{ background: `var(--seq-${i})` }} />
+            ))}
+          </span>
+          <span>{pct(domainMax)} average risk score</span>
         </span>
-        <span>{pct(domainMax)} average risk score</span>
+        <button
+          type="button"
+          aria-expanded={asTable}
+          onClick={() => setAsTable((v) => !v)}
+          className="rounded-full border border-line px-3 py-1 text-ink-soft transition-[background-color,transform] duration-150 ease-out hover:bg-surface active:scale-[0.97]"
+        >
+          {asTable ? "Hide table" : "Show as table"}
+        </button>
       </div>
+
+      {asTable && (
+        <table data-testid="heatmap-table" className="tabular mt-6 w-full text-sm">
+          <thead>
+            <tr className="text-left text-xs text-muted">
+              <th className="pb-2 font-normal">Role</th>
+              <th className="hidden pb-2 font-normal sm:table-cell">Department</th>
+              <th className="pb-2 text-right font-normal">People</th>
+              <th className="pb-2 text-right font-normal">Avg risk</th>
+              <th className="hidden pb-2 text-right font-normal sm:table-cell">Expected cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...cells]
+              .sort((a, b) => b.meanRisk - a.meanRisk)
+              .map((c) => (
+                <tr key={`${c.department}-${c.jobRole}`} className="border-t border-line">
+                  <td className="py-2">{c.jobRole}</td>
+                  <td className="hidden py-2 text-muted sm:table-cell">{c.department}</td>
+                  <td className="py-2 text-right">{int(c.n)}</td>
+                  <td className="py-2 text-right">{pct(c.meanRisk, 1)}</td>
+                  <td className="hidden py-2 text-right sm:table-cell">{money(c.expectedCost)}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      )}
 
       {tip && (
         <Tooltip x={tip.x} y={tip.y}>

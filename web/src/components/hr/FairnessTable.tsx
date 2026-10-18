@@ -8,19 +8,32 @@ const GROUP_LABEL: Record<FairnessSlice["group"], string> = {
   MaritalStatus: "Marital status",
 };
 
-/** Recall per group, shown as a dot on a hairline (no filled track) next to the numbers. */
-export function FairnessTable({ slices }: { slices: FairnessSlice[] }) {
+/**
+ * Recall per group, shown as a dot on a hairline (no filled track) next to the numbers.
+ * With overallRecall, a tick marks the whole test set's recall so gaps read at a glance.
+ */
+export function FairnessTable({ slices, overallRecall }: { slices: FairnessSlice[]; overallRecall?: number }) {
   const groups = [...new Set(slices.map((s) => s.group))];
   return (
-    <div data-testid="fairness-table" className="overflow-x-auto">
-      <table className="w-full min-w-[640px] text-sm">
+    <div data-testid="fairness-table">
+      {overallRecall !== undefined && (
+        <p className="mb-2 flex items-center gap-4 text-xs text-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2.5 rounded-full bg-series-1" aria-hidden /> Group
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3 w-px bg-ink" aria-hidden /> Everyone ({pct(overallRecall)})
+          </span>
+        </p>
+      )}
+      <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-xs text-muted">
             <th className="pb-3 font-normal">Group</th>
-            <th className="pb-3 text-right font-normal">People</th>
-            <th className="pb-3 text-right font-normal">Actually left</th>
-            <th className="pb-3 text-right font-normal">Flagged</th>
-            <th className="pb-3 pl-6 font-normal">Leavers caught (recall)</th>
+            <th className="hidden pb-3 text-right font-normal sm:table-cell">People</th>
+            <th className="hidden pb-3 text-right font-normal sm:table-cell">Actually left</th>
+            <th className="hidden pb-3 text-right font-normal md:table-cell">Flagged</th>
+            <th className="pb-3 pl-4 font-normal sm:pl-6">Leavers caught (recall)</th>
           </tr>
         </thead>
         {groups.map((g) => (
@@ -41,16 +54,19 @@ export function FairnessTable({ slices }: { slices: FairnessSlice[] }) {
                       </span>
                     )}
                   </td>
-                  <td className="text-right">{int(s.n)}</td>
-                  <td className="text-right">{pct(s.attrition_rate)}</td>
-                  <td className="text-right">{pct(s.flag_rate)}</td>
-                  <td className="pl-6">
+                  <td className="hidden text-right sm:table-cell">{int(s.n)}</td>
+                  <td className="hidden text-right sm:table-cell">{pct(s.attrition_rate)}</td>
+                  <td className="hidden text-right md:table-cell">{pct(s.flag_rate)}</td>
+                  <td className="pl-4 sm:pl-6">
                     {s.recall === null ? (
                       "n/a"
                     ) : (
                       <span className="flex items-center gap-3">
-                        <span className="relative h-3 w-40">
+                        <span className="relative h-3 w-24 sm:w-40">
                           <span className="absolute inset-x-0 top-1/2 h-px bg-line" />
+                          {overallRecall !== undefined && (
+                            <span className="absolute inset-y-0 w-px bg-ink" style={{ left: `${overallRecall * 100}%` }} />
+                          )}
                           <span className="absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-series-1" style={{ left: `${s.recall * 100}%` }} />
                         </span>
                         {pct(s.recall)}

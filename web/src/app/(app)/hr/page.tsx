@@ -1,3 +1,8 @@
-export default function Page() {
-  return <div className="mx-auto max-w-[1400px] px-4 pt-28 md:px-8"><h1 className="text-4xl font-semibold">HR dashboard</h1></div>;
+import type { Metadata } from "next";
+import { Dashboard } from "@/components/hr/Dashboard";
+
+export const metadata: Metadata = { title: "Dashboard" };
+
+export default function HrDashboardPage() {
+  return <Dashboard />;
 }
