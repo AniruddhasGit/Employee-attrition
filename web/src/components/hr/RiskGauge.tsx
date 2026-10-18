@@ -10,11 +10,10 @@ function point(frac: number, r = R) {
   return { x: 110 + r * Math.cos(a), y: 110 - r * Math.sin(a) };
 }
 
-/** Half-circle gauge. The arc springs to the new score; the flag line is a fixed tick. */
-export function RiskGauge({ value, before, threshold }: { value: number; before: number; threshold: number }) {
+/** Half-circle gauge. The arc springs to the new score; the flag line is a fixed tick (drawn once it is known). */
+export function RiskGauge({ value, before, threshold }: { value: number; before: number; threshold: number | null }) {
   const reduce = useReducedMotion();
-  const tickIn = point(threshold, R - 12);
-  const tickOut = point(threshold, R + 12);
+  const flagged = threshold !== null && value >= threshold;
   const ghost = point(before);
   return (
     <svg viewBox="0 0 220 124" className="w-full max-w-[360px]" aria-hidden>
@@ -22,7 +21,7 @@ export function RiskGauge({ value, before, threshold }: { value: number; before:
       <motion.path
         d={`M 20 110 A ${R} ${R} 0 0 1 200 110`}
         fill="none"
-        stroke={value >= threshold ? "var(--signal)" : "var(--calm)"}
+        stroke={flagged ? "var(--signal)" : "var(--calm)"}
         strokeWidth="10"
         strokeLinecap="round"
         strokeDasharray={ARC}
@@ -30,8 +29,14 @@ export function RiskGauge({ value, before, threshold }: { value: number; before:
         animate={{ strokeDashoffset: ARC * (1 - value) }}
         transition={reduce ? { duration: 0 } : { type: "spring", duration: 0.6, bounce: 0.15 }}
       />
-      <line x1={tickIn.x} y1={tickIn.y} x2={tickOut.x} y2={tickOut.y} stroke="var(--ink)" strokeWidth="1.5" />
+      {threshold !== null && <Tick threshold={threshold} />}
       {Math.abs(before - value) > 0.005 && <circle cx={ghost.x} cy={ghost.y} r="4" fill="var(--bg)" stroke="var(--ink)" strokeWidth="1.5" />}
     </svg>
   );
+}
+
+function Tick({ threshold }: { threshold: number }) {
+  const a = point(threshold, R - 12);
+  const b = point(threshold, R + 12);
+  return <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="var(--ink)" strokeWidth="1.5" />;
 }

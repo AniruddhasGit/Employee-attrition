@@ -30,7 +30,7 @@ function Segmented<T extends string | number>({
             <label
               key={o}
               htmlFor={id}
-              className={`cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors duration-150 ease-out has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-signal ${
+              className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors duration-150 ease-out has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-signal ${
                 o === value ? "bg-ink text-bg" : "border border-line text-ink-soft hover:bg-bg"
               }`}
             >
@@ -38,7 +38,7 @@ function Segmented<T extends string | number>({
                 id={id}
                 type="radio"
                 name={name}
-                className="sr-only"
+                className="absolute inset-0 cursor-pointer appearance-none rounded-full opacity-0"
                 checked={o === value}
                 onChange={() => onChange(o)}
                 aria-label={render(o)}
@@ -114,7 +114,7 @@ export function LeverPanel({ value, onChange }: { value: Full; onChange: (patch:
         label="Monthly income"
         value={value.monthlyIncome}
         min={1000}
-        max={20000}
+        max={Math.max(25000, value.monthlyIncome)}
         step={100}
         display={`$${int(value.monthlyIncome)}`}
         onChange={(v) => onChange({ monthlyIncome: v })}

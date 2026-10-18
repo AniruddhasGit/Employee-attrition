@@ -1,3 +1,13 @@
-export default function Page() {
-  return <div className="mx-auto max-w-[1400px] px-4 pt-28 md:px-8"><h1 className="text-4xl font-semibold">Person</h1></div>;
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import { PersonSkeleton, PersonView } from "@/components/hr/person/PersonView";
+
+export const metadata: Metadata = { title: "Person" };
+
+export default function PersonPage() {
+  return (
+    <Suspense fallback={<PersonSkeleton />}>
+      <PersonView />
+    </Suspense>
+  );
 }
