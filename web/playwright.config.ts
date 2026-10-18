@@ -7,6 +7,7 @@ const python = JSON.stringify(
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -25,9 +26,10 @@ export default defineConfig({
     },
     {
       command: "npm run dev",
+      env: { API_ORIGIN: "http://localhost:8010" },
       url: "http://localhost:3000",
       reuseExistingServer: true,
-      timeout: 120_000,
+      timeout: 300_000,
     },
   ],
 });
