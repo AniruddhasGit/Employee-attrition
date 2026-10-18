@@ -15,7 +15,9 @@ from api.main import app  # noqa: E402
 
 @pytest.fixture(scope="session", autouse=True)
 def _schema():
-    Base.metadata.drop_all(engine)
+    # Drop everything, including tables an older schema left behind, then build fresh.
+    with engine.begin() as conn:
+        conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public"))
     Base.metadata.create_all(engine)
     yield
 
@@ -28,7 +30,10 @@ def client():
     with TestClient(app) as c:
         yield c
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE scenarios, contact_messages RESTART IDENTITY CASCADE"))
+        conn.execute(text(
+            "TRUNCATE sessions, check_ins, action_plans, team_updates, contact_messages"
+            " RESTART IDENTITY CASCADE"
+        ))
 
 
 @pytest.fixture(scope="session")

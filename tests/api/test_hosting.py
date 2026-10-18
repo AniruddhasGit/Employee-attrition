@@ -28,16 +28,6 @@ def test_client_ip_trusts_edge_header_then_rightmost_forwarded_hop():
     assert client_ip(_Req({})) == "10.0.0.1"
 
 
-def test_scenario_saves_are_rate_limited(client, seeded):
-    from api import ratelimit
-
-    ratelimit.reset()
-    codes = [client.post("/api/scenarios", json={"employeeId": 1004, "levers": {}}).status_code
-             for _ in range(31)]
-    assert codes[:30] == [201] * 30 and codes[30] == 429
-    ratelimit.reset()
-
-
 def test_cors_origins_from_env_comma_separated(monkeypatch):
     monkeypatch.setenv("CORS_ORIGINS", "https://retain-web.onrender.com/,http://localhost:3000")
     assert Settings().cors_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]

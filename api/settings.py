@@ -16,8 +16,15 @@ class Settings(BaseSettings):
     ip_hash_salt: str = "dev-only-salt"
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     models_dir: Path = ROOT / "models"
+    # Origins allowed to send state-changing requests (CSRF check) - the web app's own origin.
+    site_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
+    # Shared with the web proxy so the API can trust the client IP it forwards.
+    proxy_secret: str = ""
+    cookie_secure: bool = False
+    session_ttl_hours: int = 12
+    demo_password: str = "retain-demo"
 
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", "site_origins", mode="before")
     @classmethod
     def _split_origins(cls, value):
         """Accept a JSON list or a comma-separated string; trailing slashes never match Origin."""

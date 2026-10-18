@@ -1,6 +1,17 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,6 +24,10 @@ class Employee(Base):
     __tablename__ = "employees"
 
     employee_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), default="")
+    is_current: Mapped[bool] = mapped_column(Boolean, index=True, default=True)
+    # HR record overlay: model inputs changed by completed action plans (e.g. a pay review).
+    record: Mapped[dict] = mapped_column(Json, default=dict)
     department: Mapped[str] = mapped_column(String(64), index=True)
     job_role: Mapped[str] = mapped_column(String(64), index=True)
     job_level: Mapped[int]
@@ -37,18 +52,6 @@ class ModelRun(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class Scenario(Base):
-    __tablename__ = "scenarios"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    public_id: Mapped[str] = mapped_column(String(16), unique=True, index=True)
-    employee_id: Mapped[int] = mapped_column(ForeignKey("employees.employee_id"))
-    levers: Mapped[dict] = mapped_column(Json)
-    before: Mapped[float]
-    after: Mapped[float]
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
 class ContactMessage(Base):
     __tablename__ = "contact_messages"
 
@@ -61,3 +64,81 @@ class ContactMessage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(254), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(16))
+    employee_id: Mapped[int | None] = mapped_column(ForeignKey("employees.employee_id"))
+    display_name: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Session(Base):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class CheckIn(Base):
+    __tablename__ = "check_ins"
+    __table_args__ = (UniqueConstraint("employee_id", "quarter"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    employee_id: Mapped[int] = mapped_column(ForeignKey("employees.employee_id"), index=True)
+    quarter: Mapped[str] = mapped_column(String(7), index=True)
+    answers: Mapped[dict] = mapped_column(Json)  # keyed by model column name
+    keep_me: Mapped[list] = mapped_column(Json)
+    comment: Mapped[str] = mapped_column(Text, default="")
+    risk_score: Mapped[float]
+    drivers: Mapped[list | None] = mapped_column(Json, nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    seeded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+
+
+class ActionPlan(Base):
+    __tablename__ = "action_plans"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    employee_id: Mapped[int] = mapped_column(ForeignKey("employees.employee_id"), index=True)
+    action: Mapped[str] = mapped_column(String(32))
+    note: Mapped[str] = mapped_column(String(300), default="")
+    created_quarter: Mapped[str] = mapped_column(String(7))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    score_at_creation: Mapped[float]
+    estimated_score: Mapped[float]
+    status: Mapped[str] = mapped_column(String(8), default="open")
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    seeded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    seed_snapshot: Mapped[dict | None] = mapped_column(Json, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class TeamUpdate(Base):
+    __tablename__ = "team_updates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    department: Mapped[str] = mapped_column(String(64), index=True)
+    quarter: Mapped[str] = mapped_column(String(7))
+    said: Mapped[str] = mapped_column(String(280))
+    did: Mapped[str] = mapped_column(String(280))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    seeded: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class DemoState(Base):
+    __tablename__ = "demo_state"
+
+    key: Mapped[str] = mapped_column(String(32), primary_key=True)
+    value: Mapped[dict] = mapped_column(Json)
