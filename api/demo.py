@@ -349,6 +349,8 @@ def seed_history(db, today: date) -> None:
     income_median = (pd.DataFrame([staff[eid].features for eid in ids])
                      .groupby("JobLevel")["MonthlyIncome"].median().to_dict())
     elapsed = max(0, (today - _quarter_start(cur)).days)
+    # Never in the future: a check-in stamped later today would outrank changes HR makes now.
+    latest_allowed = datetime.now(UTC) - timedelta(hours=1)
     rows = []
     for eid, q in sorted(scores):
         if q not in answers[eid]:
@@ -361,7 +363,8 @@ def seed_history(db, today: date) -> None:
         rows.append({
             "employee_id": eid, "quarter": q, "answers": answers[eid][q], "keep_me": keep,
             "comment": rng.choice(COMMENTS[keep[0]]) if rng.random() < 0.3 else "",
-            "risk_score": scores[(eid, q)], "drivers": None, "submitted_at": _at(day),
+            "risk_score": scores[(eid, q)], "drivers": None,
+            "submitted_at": min(_at(day), latest_allowed),
             "seeded": True,
         })
     db.execute(insert(CheckIn), rows)

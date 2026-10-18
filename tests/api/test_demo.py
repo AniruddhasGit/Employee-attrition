@@ -159,3 +159,9 @@ def test_reset_restores_a_resubmitted_seeded_checkin(seeded):
         assert (row.answers, row.keep_me, row.risk_score) == original
         assert row.seeded
         assert abs(s.get(Employee, e.employee_id).risk_score - original[2]) < 1e-9
+
+
+def test_seeded_checkins_are_never_in_the_future(seeded):
+    with SessionLocal() as s:
+        newest = s.scalar(select(func.max(CheckIn.submitted_at)))
+    assert newest <= datetime.now(UTC)
