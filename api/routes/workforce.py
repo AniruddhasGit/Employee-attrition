@@ -78,7 +78,8 @@ def summary(session: SessionDep, replacement_pct: float = Query(50, alias="repla
         "expectedLeavers": round(float(df["risk_score"].sum()), 1),
         "expectedCost": _cost(df, replacement_pct),
         "replacementPct": replacement_pct,
-        "distribution": [{"bin": float(b), "count": int(c)} for b, c in zip(edges[:-1], counts, strict=True)],
+        "distribution": [{"bin": float(b), "count": int(c)}
+                         for b, c in zip(edges[:-1], counts, strict=True)],
         "heatmap": [{"department": r.department, "jobRole": r.job_role, "n": int(r.n),
                      "meanRisk": round(float(r.meanRisk), 4),
                      "expectedCost": float(r.expectedCost)} for r in heat.itertuples()],

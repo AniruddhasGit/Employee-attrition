@@ -22,6 +22,9 @@ def _schema():
 
 @pytest.fixture
 def client():
+    from api import ratelimit
+
+    ratelimit.reset()
     with TestClient(app) as c:
         yield c
     with engine.begin() as conn:
