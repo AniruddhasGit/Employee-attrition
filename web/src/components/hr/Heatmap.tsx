@@ -11,8 +11,8 @@ import { TipRow, Tooltip } from "@/components/charts/Tooltip";
 type Cell = HeatCell;
 
 /**
- * Department rows, role cells; colour = average risk on a one-hue ramp. Hover for detail.
- * The same numbers are one click away as a plain table.
+ * Department rows, role tiles; colour = average risk on a one-hue ramp, width grows with headcount.
+ * Hover, focus or tap a tile for detail. The same numbers are one click away as a plain table.
  */
 export function Heatmap({ cells }: { cells: Cell[] }) {
   const reduce = useReducedMotion();
@@ -25,13 +25,17 @@ export function Heatmap({ cells }: { cells: Cell[] }) {
 
   return (
     <div className="relative" onMouseLeave={() => setTip(null)}>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-6 md:gap-3">
         {departments.map((dept) => {
           const row = cells.filter((c) => c.department === dept).sort((a, b) => b.meanRisk - a.meanRisk);
+          const people = row.reduce((a, c) => a + c.n, 0);
           return (
-            <div key={dept} className="grid grid-cols-12 items-start gap-3">
-              <p className="col-span-12 text-sm font-medium md:col-span-2 md:pt-3">{dept}</p>
-              <ul className="col-span-12 grid grid-cols-2 gap-[2px] sm:grid-cols-3 md:col-span-10 md:grid-cols-5">
+            <div key={dept} className="grid grid-cols-12 items-center gap-x-3 gap-y-2.5">
+              <p className="col-span-12 flex items-baseline justify-between gap-3 text-sm font-medium md:col-span-2 md:flex-col md:justify-center md:gap-0.5">
+                {dept}
+                <span className="tabular text-xs font-normal text-muted">{int(people)} people</span>
+              </p>
+              <ul className="col-span-12 flex flex-wrap gap-[3px] md:col-span-10">
                 {row.map((c) => {
                   const t = c.meanRisk / domainMax;
                   const i = order++;
@@ -44,24 +48,24 @@ export function Heatmap({ cells }: { cells: Cell[] }) {
                       initial={{ opacity: 0, transform: reduce ? "none" : "scale(0.96)" }}
                       whileInView={{ opacity: 1, transform: "scale(1)" }}
                       viewport={{ once: true, amount: 0.3 }}
-                      transition={{ duration: 0.4, delay: i * 0.035, ease: EASE_OUT }}
+                      transition={{ duration: 0.4, delay: Math.min(i, 14) * 0.035, ease: EASE_OUT }}
                       onMouseMove={(e) => {
                         const box = (e.currentTarget.closest(".relative") as HTMLElement).getBoundingClientRect();
-                        setTip({ cell: c, x: e.clientX - box.left, y: e.clientY - box.top });
+                        setTip({ cell: c, x: Math.min(Math.max(e.clientX - box.left, 80), box.width - 80), y: e.clientY - box.top });
                       }}
                       onFocus={(e) => {
                         const box = (e.currentTarget.closest(".relative") as HTMLElement).getBoundingClientRect();
                         const r = e.currentTarget.getBoundingClientRect();
-                        setTip({ cell: c, x: r.left - box.left + r.width / 2, y: r.top - box.top });
+                        setTip({ cell: c, x: Math.min(Math.max(r.left - box.left + r.width / 2, 80), box.width - 80), y: r.top - box.top });
                       }}
                       onBlur={() => setTip(null)}
-                      className="flex min-h-24 cursor-default flex-col justify-between rounded-lg p-3 outline-offset-2"
-                      style={{ background: seqColor(t), color: seqInk(t) }}
+                      className="flex min-h-24 min-w-[8.5rem] basis-0 cursor-default flex-col justify-between gap-3 rounded-xl p-3 outline-offset-2 md:min-h-28"
+                      style={{ background: seqColor(t), color: seqInk(t), flexGrow: Math.sqrt(c.n) }}
                     >
-                      <span className="text-sm leading-tight">{c.jobRole}</span>
+                      <span className="text-pretty text-sm font-medium leading-tight">{c.jobRole}</span>
                       <span className="flex items-baseline justify-between gap-2">
-                        <span className="tabular text-xl font-semibold">{pct(c.meanRisk)}</span>
-                        <span className="tabular text-xs">n {c.n}</span>
+                        <span className="tabular text-2xl font-semibold tracking-[-0.02em]">{pct(c.meanRisk)}</span>
+                        <span className="tabular text-xs opacity-80">{int(c.n)}</span>
                       </span>
                     </motion.li>
                   );
@@ -73,50 +77,55 @@ export function Heatmap({ cells }: { cells: Cell[] }) {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-muted">
-        <span className="flex items-center gap-3" aria-hidden>
-          <span>0%</span>
-          <span className="flex h-2 w-40 overflow-hidden rounded-full">
-            {Array.from({ length: 7 }, (_, i) => (
-              <span key={i} className="flex-1" style={{ background: `var(--seq-${i})` }} />
-            ))}
+        <span className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-hidden>
+          <span className="flex items-center gap-3">
+            <span>0%</span>
+            <span className="flex h-2 w-32 overflow-hidden rounded-full sm:w-40">
+              {Array.from({ length: 7 }, (_, i) => (
+                <span key={i} className="flex-1" style={{ background: `var(--seq-${i})` }} />
+              ))}
+            </span>
+            <span>{pct(domainMax)} average risk score</span>
           </span>
-          <span>{pct(domainMax)} average risk score</span>
+          <span>Corner figure: people in the role</span>
         </span>
         <button
           type="button"
           aria-expanded={asTable}
           onClick={() => setAsTable((v) => !v)}
-          className="rounded-full border border-line px-3 py-1 text-ink-soft transition-[background-color,transform] duration-150 ease-out hover:bg-surface active:scale-[0.97]"
+          className="inline-flex min-h-10 items-center rounded-full border border-line px-4 text-ink-soft transition-[background-color,border-color,transform] duration-150 ease-out hover:border-ink/25 hover:bg-surface active:scale-[0.97]"
         >
           {asTable ? "Hide table" : "Show as table"}
         </button>
       </div>
 
       {asTable && (
-        <table data-testid="heatmap-table" className="tabular mt-6 w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-muted">
-              <th className="pb-2 font-normal">Role</th>
-              <th className="hidden pb-2 font-normal sm:table-cell">Department</th>
-              <th className="pb-2 text-right font-normal">People</th>
-              <th className="pb-2 text-right font-normal">Avg risk</th>
-              <th className="hidden pb-2 text-right font-normal sm:table-cell">Expected cost</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...cells]
-              .sort((a, b) => b.meanRisk - a.meanRisk)
-              .map((c) => (
-                <tr key={`${c.department}-${c.jobRole}`} className="border-t border-line">
-                  <td className="py-2">{c.jobRole}</td>
-                  <td className="hidden py-2 text-muted sm:table-cell">{c.department}</td>
-                  <td className="py-2 text-right">{int(c.n)}</td>
-                  <td className="py-2 text-right">{pct(c.meanRisk, 1)}</td>
-                  <td className="hidden py-2 text-right sm:table-cell">{money(c.expectedCost)}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        <div className="mt-6 overflow-hidden rounded-2xl border border-line bg-surface">
+          <table data-testid="heatmap-table" className="tabular w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs uppercase tracking-[0.08em] text-muted">
+                <th className="py-3 pl-4 font-medium md:pl-6">Role</th>
+                <th className="hidden py-3 font-medium sm:table-cell">Department</th>
+                <th className="py-3 text-right font-medium">People</th>
+                <th className="py-3 pr-4 text-right font-medium sm:pr-0">Avg risk</th>
+                <th className="hidden py-3 pr-6 text-right font-medium sm:table-cell">Expected cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...cells]
+                .sort((a, b) => b.meanRisk - a.meanRisk)
+                .map((c) => (
+                  <tr key={`${c.department}-${c.jobRole}`} className="border-t border-line">
+                    <td className="py-2.5 pl-4 md:pl-6">{c.jobRole}</td>
+                    <td className="hidden py-2.5 text-muted sm:table-cell">{c.department}</td>
+                    <td className="py-2.5 text-right">{int(c.n)}</td>
+                    <td className="py-2.5 pr-4 text-right sm:pr-0">{pct(c.meanRisk, 1)}</td>
+                    <td className="hidden py-2.5 pr-6 text-right sm:table-cell">{money(c.expectedCost)}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {tip && (

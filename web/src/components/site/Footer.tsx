@@ -1,15 +1,58 @@
 "use client";
 
-import { ArrowUpRightIcon } from "@phosphor-icons/react";
+import Link from "next/link";
+import { ArrowUpIcon, ArrowUpRightIcon, DatabaseIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { EASE_OUT } from "@/lib/motion";
 import { SITE } from "@/lib/site";
+import { Logo } from "./Logo";
 
-const LINKS = [
-  { label: "GitHub", href: SITE.repo },
-  { label: "Model card", href: `${SITE.repo}/blob/main/docs/MODEL_CARD.md` },
-  { label: "Email", href: SITE.email },
+const COLUMNS = [
+  {
+    title: "Product",
+    links: [
+      { label: "How it works", href: "/#how-it-works" },
+      { label: "Insights", href: "/#questions" },
+      { label: "Sign in", href: "/login" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { label: "GitHub", href: SITE.repo },
+      { label: "Model card", href: `${SITE.repo}/blob/main/docs/MODEL_CARD.md` },
+    ],
+  },
+  {
+    title: "Contact",
+    links: [
+      { label: "Email", href: SITE.email },
+      { label: "Send a message", href: "/#contact" },
+    ],
+  },
 ];
+
+function FooterLink({ label, href }: { label: string; href: string }) {
+  const external = href.startsWith("http") || href.startsWith("mailto:");
+  const cls = "group inline-flex items-center gap-1.5 py-1 text-sm text-night-ink/80 transition-colors duration-150 hover:text-night-ink";
+  const inner = (
+    <>
+      <span className="link-underline">{label}</span>
+      {external && (
+        <ArrowUpRightIcon size={12} className="opacity-60 transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+      )}
+    </>
+  );
+  return external ? (
+    <a href={href} className={cls} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer">
+      {inner}
+    </a>
+  ) : (
+    <Link href={href} className={cls}>
+      {inner}
+    </Link>
+  );
+}
 
 export function Footer() {
   const reduce = useReducedMotion();
@@ -17,30 +60,44 @@ export function Footer() {
 
   return (
     <footer className="p-2">
-      <div className="overflow-hidden rounded-2xl bg-night px-4 pb-6 pt-14 text-night-ink md:px-8 md:pt-20">
-        <div className="mx-auto max-w-[1400px]">
-          <div className="grid grid-cols-12 gap-y-8">
-            <p className="col-span-12 max-w-[18ch] text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.035em] md:col-span-6">
-              Let&apos;s keep your people.
-            </p>
-            <p className="col-span-12 max-w-[40ch] text-sm leading-relaxed text-night-ink/70 md:col-span-4 md:col-start-9 md:self-end">
-              Built on fictional IBM HR data to show a method: honest testing, plain explanations,
-              and a model that admits what it can&apos;t do.
-            </p>
+      <div className="relative overflow-hidden rounded-2xl bg-night px-4 pb-6 pt-14 text-night-ink md:px-8 md:pt-20">
+        {/* Soft light in the corner so the dark panel has depth, not a flat slab. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-[radial-gradient(closest-side,rgb(143_176_204/0.16),transparent)]"
+        />
+        <div className="relative mx-auto max-w-[1400px]">
+          <div className="grid grid-cols-12 gap-y-12">
+            <div className="col-span-12 md:col-span-5">
+              <Link href="/" className="inline-flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+                <Logo />
+                {SITE.name}
+              </Link>
+              <p className="mt-6 max-w-[18ch] text-[clamp(2rem,4vw,3.5rem)] font-semibold leading-[1.02] tracking-[-0.035em]">
+                Let&apos;s keep your people.
+              </p>
+              <p className="mt-5 max-w-[40ch] text-sm leading-relaxed text-night-ink/70">
+                Honest testing, plain explanations, and a model that admits what it can&apos;t do.
+              </p>
+            </div>
+
+            <nav aria-label="Footer" className="col-span-12 grid grid-cols-2 gap-8 sm:grid-cols-3 md:col-span-6 md:col-start-7">
+              {COLUMNS.map((col) => (
+                <div key={col.title}>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-night-ink/50">{col.title}</p>
+                  <ul className="mt-4 flex flex-col gap-1.5">
+                    {col.links.map((l) => (
+                      <li key={l.label}>
+                        <FooterLink {...l} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </nav>
           </div>
 
-          <ul className="mt-14 flex flex-wrap gap-x-10 gap-y-4 border-t border-night-ink/15 pt-6">
-            {LINKS.map((l) => (
-              <li key={l.label}>
-                <a href={l.href} className="group inline-flex items-center gap-2 text-sm" target={l.href.startsWith("http") ? "_blank" : undefined} rel="noreferrer">
-                  {l.label}
-                  <ArrowUpRightIcon size={14} className="transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                </a>
-              </li>
-            ))}
-          </ul>
-
-          <a href={SITE.email} className="mt-10 block">
+          <a href={SITE.email} className="mt-16 block border-t border-night-ink/15 pt-8 md:mt-20">
             {/* The visible parent is observed; words start clipped below their masks. */}
             <motion.span
               initial="hidden"
@@ -67,9 +124,21 @@ export function Footer() {
             </motion.span>
           </a>
 
-          <div className="mt-8 flex flex-wrap justify-between gap-2 text-xs text-night-ink/60">
-            <p>© 2026 {SITE.author}</p>
-            <p>{SITE.disclaimer}</p>
+          <div className="mt-10 flex flex-col gap-4 border-t border-night-ink/15 pt-6 text-xs text-night-ink/60 md:flex-row md:items-center md:justify-between">
+            <p className="flex items-center gap-2">
+              <DatabaseIcon size={14} aria-hidden className="shrink-0" />
+              {SITE.dataNote}
+            </p>
+            <div className="flex items-center justify-between gap-6">
+              <p>© 2026 {SITE.author}</p>
+              <a
+                href="#main"
+                aria-label="Back to top"
+                className="grid size-10 place-items-center rounded-full border border-night-ink/20 text-night-ink transition-transform duration-150 ease-out hover:border-night-ink/40 active:scale-[0.97]"
+              >
+                <ArrowUpIcon size={14} />
+              </a>
+            </div>
           </div>
         </div>
       </div>

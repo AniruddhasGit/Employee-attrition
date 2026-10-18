@@ -1,17 +1,34 @@
 "use client";
 
-import { CheckCircleIcon } from "@phosphor-icons/react";
+import { ArrowUpRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeSimpleIcon, FileTextIcon, GithubLogoIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState, type FormEvent } from "react";
 import { ApiError, sendContact } from "@/lib/api";
 import { EASE_OUT } from "@/lib/motion";
+import { SITE } from "@/lib/site";
 import { ArrowCircle } from "@/components/ui/ArrowCircle";
 import { Reveal } from "@/components/ui/Reveal";
 
 type Status = "idle" | "sending" | "sent" | "error";
 
 const field =
-  "w-full border-0 border-b border-line bg-transparent px-0 py-2 text-base text-ink outline-none transition-colors duration-200 placeholder:text-muted focus:border-ink";
+  "peer w-full border-0 border-b border-line bg-transparent px-0 py-2.5 text-base text-ink outline-none placeholder:text-mist";
+
+/** Underline that draws in from the left while its sibling input has focus. */
+function FocusLine() {
+  return (
+    <span
+      aria-hidden
+      className="pointer-events-none absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-ink transition-transform duration-300 ease-out peer-focus:scale-x-100"
+    />
+  );
+}
+
+const DIRECT = [
+  { label: "Email directly", detail: SITE.email.replace("mailto:", ""), href: SITE.email, Icon: EnvelopeSimpleIcon },
+  { label: "Read the model card", detail: "Method, metrics and limits", href: `${SITE.repo}/blob/main/docs/MODEL_CARD.md`, Icon: FileTextIcon },
+  { label: "Browse the source", detail: "GitHub", href: SITE.repo, Icon: GithubLogoIcon },
+];
 
 export function ContactSection() {
   const [status, setStatus] = useState<Status>("idle");
@@ -46,20 +63,45 @@ export function ContactSection() {
     <section id="contact" aria-labelledby="contact-title" className="bg-surface">
       <div className="mx-auto grid max-w-[1400px] grid-cols-12 gap-y-12 px-4 py-24 md:px-8 md:py-32">
         <div className="col-span-12 md:col-span-5">
+          <p className="mb-6 flex items-center gap-2 text-sm text-muted md:mb-8">
+            <span aria-hidden className="h-px w-6 bg-mist" />
+            Contact
+          </p>
           <Reveal>
             <h2 id="contact-title" className="text-[clamp(2.25rem,4.4vw,4rem)] font-semibold leading-[1] tracking-[-0.035em]">
               Have a question about the model?
             </h2>
           </Reveal>
           <Reveal delay={0.1}>
-            <p className="mt-6 max-w-[38ch] leading-relaxed text-muted">
+            <p className="mt-6 max-w-[38ch] leading-relaxed text-pretty text-muted">
               Questions about the method, the data, or using this approach on your own team. I read
               every message.
             </p>
           </Reveal>
+          <ul className="mt-10 flex flex-col border-t border-line">
+            {DIRECT.map(({ label, detail, href, Icon }, i) => (
+              <Reveal as="li" key={label} delay={0.15 + 0.05 * i} y={10} className="border-b border-line">
+                <a
+                  href={href}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel="noreferrer"
+                  className="group flex items-center gap-4 py-4"
+                >
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-bg text-ink-soft">
+                    <Icon size={17} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{label}</span>
+                    <span className="block truncate text-sm text-muted">{detail}</span>
+                  </span>
+                  <ArrowUpRightIcon size={16} className="shrink-0 text-muted transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                </a>
+              </Reveal>
+            ))}
+          </ul>
         </div>
 
-        <div data-testid="contact-form" className="col-span-12 md:col-span-6 md:col-start-7">
+        <div data-testid="contact-form" className="col-span-12 md:col-span-6 md:col-start-7 md:pt-2">
           <AnimatePresence mode="wait" initial={false}>
             {status === "sent" ? (
               <motion.div
@@ -70,7 +112,14 @@ export function ContactSection() {
                 transition={{ duration: 0.3, ease: EASE_OUT }}
                 className="flex flex-col items-start gap-4 border-t border-line pt-8"
               >
-                <CheckCircleIcon size={28} className="text-calm" weight="fill" />
+                <motion.span
+                  initial={{ opacity: 0, transform: "scale(0.8)" }}
+                  animate={{ opacity: 1, transform: "scale(1)" }}
+                  transition={{ type: "spring", duration: 0.45, bounce: 0.3, delay: 0.05 }}
+                  className="grid size-12 place-items-center rounded-full bg-bg ring-1 ring-line"
+                >
+                  <CheckCircleIcon size={26} className="text-calm" weight="fill" />
+                </motion.span>
                 <p className="text-2xl font-medium">Thanks. Message received.</p>
                 <p className="text-muted">You&apos;ll hear back by email.</p>
               </motion.div>
@@ -80,20 +129,29 @@ export function ContactSection() {
                 onSubmit={onSubmit}
                 exit={{ opacity: 0, transform: "translateY(-8px)" }}
                 transition={{ duration: 0.2, ease: EASE_OUT }}
-                className="grid grid-cols-1 gap-8 md:grid-cols-2"
+                className="grid grid-cols-1 gap-8 rounded-2xl border border-line bg-bg/60 p-5 sm:p-8 md:grid-cols-2"
                 noValidate={false}
               >
                 <div className="flex flex-col gap-2">
                   <label htmlFor="c-name" className="text-sm font-medium">Name</label>
-                  <input id="c-name" name="name" required maxLength={80} autoComplete="name" className={field} />
+                  <div className="relative">
+                    <input id="c-name" name="name" required maxLength={80} autoComplete="name" placeholder="Your name" className={field} />
+                    <FocusLine />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label htmlFor="c-email" className="text-sm font-medium">Email</label>
-                  <input id="c-email" name="email" type="email" required autoComplete="email" className={field} />
+                  <div className="relative">
+                    <input id="c-email" name="email" type="email" required autoComplete="email" placeholder="you@company.com" className={field} />
+                    <FocusLine />
+                  </div>
                 </div>
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label htmlFor="c-message" className="text-sm font-medium">Message</label>
-                  <textarea id="c-message" name="message" required minLength={10} maxLength={2000} rows={4} className={`${field} resize-none`} />
+                  <div className="relative">
+                    <textarea id="c-message" name="message" required minLength={10} maxLength={2000} rows={4} placeholder="What would you like to know?" className={`${field} block resize-none`} />
+                    <FocusLine />
+                  </div>
                   <p className="text-xs text-muted">At least 10 characters.</p>
                 </div>
                 {/* Honeypot: hidden from people and assistive tech; bots tend to fill it. */}
@@ -109,13 +167,22 @@ export function ContactSection() {
                   <button
                     type="submit"
                     disabled={status === "sending"}
-                    className="group inline-flex items-center gap-3 rounded-full bg-ink py-1.5 pl-5 pr-1.5 text-sm font-medium text-bg transition-transform duration-150 ease-out active:scale-[0.98] disabled:opacity-60"
+                    className="group inline-flex h-11 items-center gap-3 rounded-full bg-ink pl-5 pr-1.5 text-sm font-medium text-bg transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-70"
                   >
                     {status === "sending" ? "Sending" : "Send message"}
-                    <ArrowCircle inverted />
+                    {status === "sending" ? (
+                      <span aria-hidden className="grid size-7 place-items-center rounded-full bg-bg text-ink">
+                        <CircleNotchIcon size={14} weight="bold" className="animate-spin" />
+                      </span>
+                    ) : (
+                      <ArrowCircle inverted />
+                    )}
                   </button>
                   {status === "error" && (
-                    <p role="alert" className="text-sm text-signal">{error}</p>
+                    <p role="alert" className="flex items-start gap-2 text-sm text-ink-soft">
+                      <WarningCircleIcon size={16} className="mt-0.5 shrink-0 text-signal" />
+                      {error}
+                    </p>
                   )}
                 </div>
               </motion.form>

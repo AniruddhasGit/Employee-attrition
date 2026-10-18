@@ -109,8 +109,9 @@ export function CheckInFlow() {
     <div className={shell}>
       <div className="mx-auto max-w-3xl">
         <div className="flex items-baseline justify-between gap-4 text-sm">
-          <p className="text-muted">
-            {fmtQuarter(form.quarter)} check-in{form.current ? " · updating" : ""}
+          <p className="inline-flex items-center gap-2 text-muted">
+            <span aria-hidden className="size-1.5 rounded-full bg-calm" />
+            {fmtQuarter(form.quarter)} check-in{form.current ? " · updating your answers" : ""}
           </p>
           <p className="font-mono text-xs tabular-nums text-muted">
             {step + 1} of {total}
@@ -122,13 +123,16 @@ export function CheckInFlow() {
           <AnimatePresence mode="wait" initial={false} custom={dir}>
             <Step key={step} dir={dir} focusOnEnter={moved}>
               {step === 0 && (
-                <div className="mb-10 flex items-start gap-3 rounded-2xl border border-line bg-surface p-5">
-                  <EyeSlashIcon size={20} className="mt-0.5 shrink-0 text-calm" aria-hidden />
-                  <p className="text-sm leading-relaxed text-ink-soft">{form.notice}</p>
+                <div className="mb-10 flex items-start gap-4 rounded-2xl border border-line bg-surface p-5">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-calm/15 text-calm">
+                    <EyeSlashIcon size={18} aria-hidden />
+                  </span>
+                  <p className="self-center text-sm leading-relaxed text-ink-soft">{form.notice}</p>
                 </div>
               )}
               {question ? (
                 <>
+                  <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">Question {step + 1}</p>
                   <StepTitle id={`q-${step}`}>{question.label}</StepTitle>
                   <div className="mt-10">
                     <Question
@@ -139,10 +143,16 @@ export function CheckInFlow() {
                       labelledBy={`q-${step}`}
                     />
                   </div>
-                  <p className="mt-4 hidden text-xs text-muted md:block">Arrow keys move between answers. Enter goes on.</p>
+                  <p className="mt-5 hidden items-center gap-2 text-xs text-muted md:flex">
+                    <Kbd>←</Kbd>
+                    <Kbd>→</Kbd> move between answers
+                    <span className="mx-1 text-haze">·</span>
+                    <Kbd>Enter</Kbd> goes on
+                  </p>
                 </>
               ) : (
                 <>
+                  <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">Last step</p>
                   <StepTitle id="q-keep">What would keep you here</StepTitle>
                   <p className="mt-3 max-w-[52ch] text-muted">Pick up to three. HR sees these with your name, and adds them up by team to see what matters most.</p>
                   <div className="mt-8">
@@ -160,12 +170,12 @@ export function CheckInFlow() {
           </p>
         )}
 
-        <div className="mt-12 flex items-center justify-between gap-4 border-t border-line pt-6">
+        <div className="sticky bottom-0 z-20 -mx-4 mt-10 flex items-center justify-between gap-4 border-t border-line bg-bg/85 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md md:static md:mx-0 md:mt-12 md:bg-transparent md:px-0 md:pb-0 md:pt-6 md:backdrop-blur-none">
           <button
             type="button"
             onClick={() => go(step - 1)}
             disabled={step === 0 || sending}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm text-ink-soft outline-none transition-[transform,background-color] duration-150 ease-out hover:bg-surface focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] disabled:invisible"
+            className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2.5 text-sm text-ink-soft outline-none transition-[transform,translate,scale,background-color] duration-150 ease-out hover:bg-surface focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] disabled:invisible"
           >
             <ArrowLeftIcon size={14} aria-hidden /> Back
           </button>
@@ -214,9 +224,17 @@ function Step({ dir, focusOnEnter, children }: { dir: number; focusOnEnter: bool
   );
 }
 
+function Kbd({ children }: { children: ReactNode }) {
+  return (
+    <kbd className="inline-grid min-w-6 place-items-center rounded-md border border-line bg-surface px-1.5 py-0.5 font-mono text-[11px] text-ink-soft shadow-[0_1px_0_var(--line)]">
+      {children}
+    </kbd>
+  );
+}
+
 function StepTitle({ id, children }: { id: string; children: ReactNode }) {
   return (
-    <h1 id={id} tabIndex={-1} className="max-w-[22ch] text-[clamp(1.875rem,4.2vw,3.25rem)] font-semibold leading-[1.02] tracking-[-0.035em] outline-none">
+    <h1 id={id} tabIndex={-1} className="max-w-[22ch] text-[clamp(1.875rem,4.2vw,3.25rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-balance outline-none">
       {children}
     </h1>
   );
@@ -226,7 +244,12 @@ function Progress({ step, total }: { step: number; total: number }) {
   return (
     <div className="mt-3 flex gap-1.5" aria-hidden>
       {Array.from({ length: total }, (_, i) => (
-        <span key={i} className={`h-1 flex-1 rounded-full transition-colors duration-200 ${i <= step ? "bg-ink" : "bg-haze/70"}`} />
+        <span key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-haze/70">
+          <span
+            className="block h-full origin-left rounded-full bg-ink transition-transform duration-300 ease-out"
+            style={{ transform: i <= step ? "scaleX(1)" : "scaleX(0)" }}
+          />
+        </span>
       ))}
     </div>
   );

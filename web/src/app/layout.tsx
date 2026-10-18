@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: { default: `${SITE.name}: keep the people you'd hate to lose`, template: `%s | ${SITE.name}` },
   description:
-    "Quarterly check-ins, an honest attrition model and action plans that show whether they worked. Built on fictional IBM HR data.",
+    "Quarterly check-ins, an honest attrition model and action plans that show whether they worked. Built on the IBM HR Analytics dataset.",
 };
 
 export const viewport: Viewport = {

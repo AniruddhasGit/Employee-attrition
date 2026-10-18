@@ -1,10 +1,12 @@
 "use client";
 
+import { motion, useReducedMotion } from "motion/react";
 import type { Levers } from "@/lib/api";
 import { int } from "@/lib/format";
 
 type Full = Required<Levers>;
 
+/** Radio pills; the dark "selected" pill slides between options. */
 function Segmented<T extends string | number>({
   name,
   label,
@@ -20,30 +22,40 @@ function Segmented<T extends string | number>({
   onChange: (v: T) => void;
   render?: (v: T) => string;
 }) {
+  const reduce = useReducedMotion();
   return (
     <fieldset>
-      <legend className="mb-2 text-sm font-medium">{label}</legend>
-      <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
+      <legend className="mb-2.5 text-sm font-medium">{label}</legend>
+      <div role="radiogroup" aria-label={label} className="inline-flex max-w-full flex-wrap gap-1 rounded-full bg-bg p-1">
         {options.map((o) => {
           const id = `${name}-${o}`;
+          const on = o === value;
           return (
             <label
               key={o}
               htmlFor={id}
-              className={`relative cursor-pointer rounded-full px-3 py-1.5 text-sm transition-colors duration-150 ease-out has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-signal ${
-                o === value ? "bg-ink text-bg" : "border border-line text-ink-soft hover:bg-bg"
+              className={`relative inline-flex min-h-10 min-w-10 cursor-pointer items-center justify-center rounded-full px-3.5 text-sm transition-[color,transform] duration-150 ease-out active:scale-[0.97] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink sm:min-h-9 sm:min-w-9 ${
+                on ? "text-bg" : "text-ink-soft hover:text-ink"
               }`}
             >
+              {on && (
+                <motion.span
+                  layoutId={reduce ? undefined : `seg-${name}`}
+                  aria-hidden
+                  className="absolute inset-0 rounded-full bg-ink"
+                  transition={{ type: "spring", duration: 0.35, bounce: 0.12 }}
+                />
+              )}
               <input
                 id={id}
                 type="radio"
                 name={name}
-                className="absolute inset-0 cursor-pointer appearance-none rounded-full opacity-0"
-                checked={o === value}
+                className="absolute inset-0 z-10 cursor-pointer appearance-none rounded-full opacity-0"
+                checked={on}
                 onChange={() => onChange(o)}
                 aria-label={render(o)}
               />
-              {render(o)}
+              <span className="relative">{render(o)}</span>
             </label>
           );
         })}
@@ -52,6 +64,7 @@ function Segmented<T extends string | number>({
   );
 }
 
+/** Native range input, restyled: a filled track up to the thumb, a 24px hit area around a 6px track. */
 function Slider({
   id,
   label,
@@ -71,11 +84,12 @@ function Slider({
   display: string;
   onChange: (v: number) => void;
 }) {
+  const fill = ((value - min) / (max - min)) * 100;
   return (
     <div>
-      <label htmlFor={id} className="flex justify-between gap-4 text-sm">
+      <label htmlFor={id} className="flex items-baseline justify-between gap-4 text-sm">
         <span className="font-medium">{label}</span>
-        <span className="tabular text-muted">{display}</span>
+        <span className="tabular rounded-full bg-bg px-2.5 py-0.5 font-medium text-ink">{display}</span>
       </label>
       <input
         id={id}
@@ -85,7 +99,12 @@ function Slider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-2 w-full accent-[var(--ink)]"
+        style={{
+          // Horizontal 3px / vertical 16px outer radius leaves a 3px round on the 6px content-box track.
+          borderRadius: "3px / 16px",
+          background: `linear-gradient(to right, var(--ink) 0%, var(--ink) ${fill}%, color-mix(in oklab, var(--haze) 70%, transparent) ${fill}%) content-box`,
+        }}
+        className="mt-1.5 h-8 w-full cursor-pointer appearance-none bg-transparent py-[13px] [&::-moz-range-thumb]:size-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-surface [&::-webkit-slider-thumb]:size-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-surface [&::-webkit-slider-thumb]:shadow-[0_2px_6px_rgb(14_17_22/0.25)] [&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150 active:[&::-webkit-slider-thumb]:scale-110"
       />
     </div>
   );
@@ -100,7 +119,7 @@ const TRAVEL_LABEL: Record<Full["businessTravel"], string> = {
 
 export function LeverPanel({ value, onChange }: { value: Full; onChange: (patch: Levers) => void }) {
   return (
-    <div className="flex flex-col gap-7">
+    <div className="flex flex-col gap-6">
       <Segmented
         name="overtime"
         label="Overtime"

@@ -77,17 +77,31 @@ export function Question({
             data-autofocus={on || (selected === -1 && i === 0) ? "" : undefined}
             onClick={() => choose(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left outline-none transition-[transform,background-color,border-color,color] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.98] md:p-5 ${
+            className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left outline-none transition-[transform,translate,scale,background-color,border-color,color,box-shadow] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] md:p-5 ${
               count ? "min-h-20 items-center justify-center" : scale ? "min-h-28 md:min-h-36" : "min-h-20 md:min-h-28"
-            } ${on ? "border-ink bg-ink text-bg" : "border-line bg-surface text-ink hover:border-ink/30"}`}
+            } ${
+              on
+                ? "border-ink bg-ink text-bg shadow-[0_14px_32px_-16px_rgb(14_17_22/0.55)]"
+                : "border-line bg-surface text-ink hover:-translate-y-0.5 hover:border-ink/30 hover:shadow-[0_10px_24px_-18px_rgb(14_17_22/0.45)]"
+            }`}
           >
             {scale && <Level n={i + 1} on={on} />}
+            {scale && (
+              <span
+                aria-hidden
+                className={`absolute right-4 top-4 grid size-5 place-items-center rounded-full bg-bg text-ink transition-[transform,translate,scale,opacity] duration-200 ease-out md:right-5 md:top-5 ${
+                  on ? "scale-100 opacity-100" : "scale-75 opacity-0"
+                }`}
+              >
+                <CheckIcon size={12} weight="bold" />
+              </span>
+            )}
             {!scale && !count && (
               <span
                 aria-hidden
                 className={`grid size-5 place-items-center rounded-full border transition-colors duration-150 ${on ? "border-bg bg-bg text-ink" : "border-line"}`}
               >
-                {on && <CheckIcon size={12} weight="bold" />}
+                <CheckIcon size={12} weight="bold" className={`transition-[transform,translate,scale,opacity] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-50 opacity-0"}`} />
               </span>
             )}
             <span className={count ? "text-2xl font-semibold tabular-nums tracking-[-0.02em]" : "mt-6 text-lg font-medium leading-tight"}>

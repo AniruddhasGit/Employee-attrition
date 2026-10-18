@@ -9,14 +9,17 @@ import { TipRow, Tooltip } from "@/components/charts/Tooltip";
 
 type Row = CheckInStatus["byDepartment"][number];
 
-/** One horizontal bar per department: the answered share, labelled with the counts. */
-export function DepartmentBars({ rows }: { rows: Row[] }) {
+/**
+ * One horizontal bar per department: the answered share, with a hairline at the company-wide rate
+ * so it's obvious who is ahead and who is behind.
+ */
+export function DepartmentBars({ rows, average }: { rows: Row[]; average: number }) {
   const reduce = useReducedMotion();
   const [hover, setHover] = useState<number | null>(null);
 
   return (
     <div>
-      <div className="mb-4 flex items-center gap-4 text-xs text-muted" aria-hidden>
+      <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted" aria-hidden>
         <span className="flex items-center gap-1.5">
           <span className="size-2 rounded-full bg-calm" />
           Answered
@@ -25,8 +28,12 @@ export function DepartmentBars({ rows }: { rows: Row[] }) {
           <span className="size-2 rounded-full bg-haze" />
           Waiting
         </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-3 w-px bg-ink/60" />
+          Company rate · <span className="tabular">{pct(average)}</span>
+        </span>
       </div>
-      <ul className="space-y-5" aria-hidden>
+      <ul className="space-y-6" aria-hidden>
         {rows.map((r, i) => {
           const share = r.total ? r.answered / r.total : 0;
           return (
@@ -34,27 +41,34 @@ export function DepartmentBars({ rows }: { rows: Row[] }) {
               key={r.department}
               data-testid="dept-bar"
               className="relative"
-              onPointerEnter={() => setHover(i)}
+              onPointerEnter={(e) => e.pointerType === "mouse" && setHover(i)}
               onPointerLeave={() => setHover(null)}
             >
-              <div className="mb-2 flex items-baseline justify-between gap-3 text-sm">
-                <span className="truncate font-medium">{r.department}</span>
-                <span className="tabular shrink-0 text-muted">
-                  {r.answered} of {r.total} answered
-                </span>
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <span className="min-w-0 text-sm font-medium">{r.department}</span>
+                <span className="tabular shrink-0 text-sm font-semibold">{pct(share)}</span>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-haze/60">
-                <motion.div
-                  className="h-full origin-left rounded-full bg-calm"
-                  style={{ width: `${share * 100}%` }}
-                  initial={{ transform: reduce ? "scaleX(1)" : "scaleX(0)" }}
-                  whileInView={{ transform: "scaleX(1)" }}
-                  viewport={{ once: true }}
-                  transition={reduce ? { duration: 0 } : { duration: 0.45, delay: 0.1 + i * 0.06, ease: EASE_OUT }}
+              <div className="relative h-3">
+                <div className="h-full overflow-hidden rounded-full bg-haze/50">
+                  <motion.div
+                    className="h-full origin-left rounded-full bg-calm"
+                    style={{ width: `${share * 100}%` }}
+                    initial={{ transform: reduce ? "scaleX(1)" : "scaleX(0)" }}
+                    whileInView={{ transform: "scaleX(1)" }}
+                    viewport={{ once: true }}
+                    transition={reduce ? { duration: 0 } : { duration: 0.7, delay: 0.15 + i * 0.07, ease: EASE_OUT }}
+                  />
+                </div>
+                <span
+                  className="absolute -top-1 -bottom-1 w-px bg-ink/60"
+                  style={{ left: `${average * 100}%` }}
                 />
               </div>
+              <p className="tabular mt-1.5 text-xs text-muted">
+                {r.answered} of {r.total} answered
+              </p>
               {hover === i && (
-                <Tooltip x={`${Math.max(share * 100, 12)}%`} y={28}>
+                <Tooltip x={`${Math.min(Math.max(share * 100, 14), 86)}%`} y={28}>
                   <p className="mb-1 font-medium text-ink">{r.department}</p>
                   <TipRow label="Answered" value={String(r.answered)} swatch="var(--calm)" />
                   <TipRow label="Waiting" value={String(r.total - r.answered)} swatch="var(--haze)" />

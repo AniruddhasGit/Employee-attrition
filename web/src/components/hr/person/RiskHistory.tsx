@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { pct, signedPct } from "@/lib/format";
 import { EASE_OUT } from "@/lib/motion";
 import { TipRow, Tooltip } from "@/components/charts/Tooltip";
@@ -30,6 +30,7 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
   const reduce = useReducedMotion();
   const [ref, width] = useWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
+  const gid = useId().replace(/:/g, "");
 
   const top = Math.max(...history.map((h) => h.riskScore), threshold ?? 0);
   const step = top * 1.15 > 0.6 ? 0.2 : 0.1; // round gridlines: every 10 pts, or 20 above 60%
@@ -40,6 +41,8 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
   const x = (i: number) => PAD.left + (history.length === 1 ? innerW / 2 : (innerW * i) / (history.length - 1));
   const y = (v: number) => PAD.top + innerH * (1 - v / domain);
   const path = history.map((h, i) => `${i ? "L" : "M"} ${x(i)} ${y(h.riskScore)}`).join(" ");
+  const area =
+    history.length > 1 ? `${path} L ${x(history.length - 1)} ${PAD.top + innerH} L ${x(0)} ${PAD.top + innerH} Z` : "";
   const flagged = (v: number) => threshold !== null && v >= threshold;
 
   function nearest(clientX: number, box: DOMRect) {
@@ -64,6 +67,17 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
       >
         {width > 0 && (
           <svg width={width} height={H} role="img" aria-label="Risk score by quarter; the table below lists the values." className="block overflow-visible">
+            <defs>
+              <linearGradient id={`fill-${gid}`} x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--series-1)" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="var(--series-1)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+
+            {threshold !== null && (
+              <rect x={PAD.left} y={PAD.top} width={innerW} height={Math.max(y(threshold) - PAD.top, 0)} fill="var(--signal)" opacity="0.05" />
+            )}
+
             {ticks.map((t) => (
               <g key={t}>
                 <line x1={PAD.left} x2={width - PAD.right} y1={y(t)} y2={y(t)} stroke="var(--line)" />
@@ -86,11 +100,21 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
               <line x1={x(active)} x2={x(active)} y1={PAD.top} y2={PAD.top + innerH} stroke="var(--ink)" strokeOpacity="0.18" />
             )}
 
+            {area && (
+              <motion.path
+                d={area}
+                fill={`url(#fill-${gid})`}
+                initial={reduce ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: reduce ? 0 : 0.35, ease: EASE_OUT }}
+              />
+            )}
+
             <motion.path
               d={path}
               fill="none"
               stroke="var(--series-1)"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeLinejoin="round"
               strokeLinecap="round"
               initial={reduce ? false : { pathLength: 0 }}
@@ -145,7 +169,7 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
       </div>
 
       <details className="group mt-4 text-sm">
-        <summary className="cursor-pointer select-none text-muted transition-colors duration-150 hover:text-ink">Show as a table</summary>
+        <summary className="cursor-pointer select-none py-2 text-muted transition-colors duration-150 [@media(hover:hover)]:hover:text-ink">Show as a table</summary>
         <table className="mt-3 w-full text-sm">
           <thead>
             <tr className="text-left text-xs text-muted">

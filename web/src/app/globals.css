@@ -168,3 +168,58 @@ select option {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* --- Site-chrome additions (additive only) --- */
+
+/* Skeleton shimmer: a soft band sweeps across with transform only. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
+  animation: skeleton-sweep 1.6s var(--ease-in-out) infinite;
+}
+@media (prefers-color-scheme: dark) {
+  .skeleton-shimmer::after {
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+  }
+}
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Hairline that draws itself under a link on hover (fine pointers only). */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 250ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .link-underline:hover,
+  .group:hover > .link-underline {
+    background-size: 100% 1px;
+  }
+}
+
+/* Faint dotted grid used behind section art. */
+.dot-grid {
+  background-image: radial-gradient(var(--line) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
+    opacity: 0;
+  }
+}

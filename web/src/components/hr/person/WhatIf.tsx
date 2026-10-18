@@ -1,9 +1,11 @@
 "use client";
 
 import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { simulate, type Levers, type Person, type SimulateResult } from "@/lib/api";
 import { pct, signedPct } from "@/lib/format";
+import { EASE_OUT } from "@/lib/motion";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { BandChip } from "../BandChip";
 import { DriverBars } from "../DriverBars";
@@ -16,6 +18,9 @@ export function WhatIf({ person, threshold }: { person: Person; threshold: numbe
   const [result, setResult] = useState<SimulateResult | null>(null);
   const [failed, setFailed] = useState(false);
   const request = useRef(0);
+  const reduce = useReducedMotion();
+  const card = useRef<HTMLDivElement>(null);
+  const cardInView = useInView(card, { amount: 0.2 });
 
   const changed = Object.keys(levers).length > 0;
   useEffect(() => {
@@ -58,12 +63,12 @@ export function WhatIf({ person, threshold }: { person: Person; threshold: numbe
   }
 
   return (
-    <div className="grid grid-cols-12 gap-y-10 lg:gap-x-12">
-      <div className="col-span-12 min-w-0 lg:col-span-7">
-        <div className="rounded-2xl border border-line bg-surface p-5 md:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <p className="flex items-center gap-2 text-sm text-muted">
+    <div className="grid grid-cols-12 gap-y-6 lg:gap-x-12">
+      <div ref={card} className="col-span-12 min-w-0 lg:col-span-7 lg:row-start-1">
+        <div className="relative overflow-hidden rounded-3xl border border-line bg-surface p-6 shadow-[0_24px_48px_-36px_rgb(27_36_48/0.45)] md:p-8">
+          <div className="flex items-center justify-between gap-4 sm:gap-6">
+            <div className="min-w-0">
+              <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
                 {failed ? "Out of date: couldn't update" : changed ? "Model's estimate with these changes" : "Risk score now"}
                 <BandChip band={band} />
               </p>
@@ -71,46 +76,98 @@ export function WhatIf({ person, threshold }: { person: Person; threshold: numbe
                 testId="sim-after"
                 value={after}
                 format={(v) => pct(v)}
-                className={`mt-1 block text-[clamp(3.5rem,8vw,6rem)] font-semibold leading-none tracking-[-0.045em] transition-opacity duration-200 ${failed ? "opacity-35" : ""}`}
+                className={`mt-2 block text-[clamp(3.25rem,9vw,6.5rem)] font-semibold leading-[0.85] tracking-[-0.05em] transition-opacity duration-200 ${failed ? "opacity-35" : ""}`}
               />
-              <p className="mt-2 text-sm text-muted">
-                Recorded <span className="tabular text-ink">{pct(person.riskScore)}</span>
-                {changed && (
-                  <span className={`ml-3 tabular font-medium ${delta < 0 ? "text-calm" : "text-signal"}`}>{signedPct(delta)}</span>
-                )}
+              <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+                <span>
+                  Recorded <span className="tabular font-medium text-ink">{pct(person.riskScore)}</span>
+                </span>
+                <AnimatePresence initial={false}>
+                  {changed && (
+                    <motion.span
+                      key="delta"
+                      initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "scale(0.9)" }}
+                      animate={{ opacity: 1, transform: "scale(1)" }}
+                      exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                      transition={{ duration: 0.2, ease: EASE_OUT }}
+                      className={`tabular rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        delta < -0.005 ? "bg-calm/15 text-calm" : delta > 0.005 ? "bg-signal-soft text-signal" : "bg-haze/50 text-muted"
+                      }`}
+                    >
+                      {signedPct(delta)}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </p>
             </div>
-            <RiskGauge value={after} before={person.riskScore} threshold={threshold} />
+            <div className="w-1/2 max-w-[280px] shrink-0">
+              <RiskGauge value={after} before={person.riskScore} threshold={threshold} />
+            </div>
           </div>
-          <div className="mt-10 border-t border-line pt-6">
-            <h3 className="mb-4 font-medium">What drives this score</h3>
-            <DriverBars drivers={drivers} />
+        </div>
+      </div>
+
+      <div className="col-span-12 min-w-0 lg:col-span-5 lg:row-span-2 lg:row-start-1">
+        <div className="rounded-3xl border border-line bg-surface p-6 md:p-7 lg:sticky lg:top-24">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">Levers</h3>
+              <p className="mt-0.5 text-sm text-muted">Move one and watch the score respond.</p>
+            </div>
+            <button
+              type="button"
+              onClick={reset}
+              disabled={!changed}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-line px-3.5 text-sm text-ink-soft transition-[transform,opacity,background-color] duration-150 ease-out active:scale-[0.97] enabled:hover:bg-bg disabled:opacity-40"
+            >
+              <ArrowCounterClockwiseIcon size={14} aria-hidden /> Reset
+            </button>
           </div>
+          <div className="mt-6 border-t border-line pt-6">
+            <LeverPanel value={{ ...person.levers, ...levers }} onChange={update} />
+          </div>
+          {failed && <p className="mt-4 text-sm text-signal">Couldn&apos;t reach the model. Move a lever again in a moment.</p>}
+        </div>
+      </div>
+
+      <div className="col-span-12 min-w-0 lg:col-span-7 lg:row-start-2">
+        <div className="rounded-3xl border border-line bg-surface p-6 md:p-8">
+          <h3 className="mb-5 font-medium">What drives this score</h3>
+          <DriverBars drivers={drivers} />
         </div>
         <p className="mt-4 text-sm leading-relaxed text-muted">
           This shows how the model responds to a change, not what causes anyone to leave. Treat it as a question worth asking, not an answer.
         </p>
       </div>
 
-      <div className="col-span-12 min-w-0 lg:col-span-5">
-        <div className="lg:sticky lg:top-24">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium">Levers</h3>
+      {/* Phones: once the score card scrolls away, keep the live estimate in reach while the levers move. */}
+      <AnimatePresence>
+        {changed && !cardInView && (
+          <motion.div
+            key="float"
+            role="status"
+            initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(16px)" }}
+            animate={{ opacity: 1, transform: "translateY(0px)" }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(16px)", transition: { duration: 0.15 } }}
+            transition={{ duration: 0.25, ease: EASE_OUT }}
+            className="fixed inset-x-4 bottom-4 z-40 flex items-center justify-between gap-3 rounded-full bg-night py-2 pl-5 pr-2 text-night-ink shadow-[0_16px_40px_-12px_rgb(0_0_0/0.5)] lg:hidden"
+          >
+            <span className="text-sm">
+              Estimate <span className="tabular ml-1 text-lg font-semibold">{pct(after)}</span>
+              <span className={`tabular ml-2 text-xs font-medium ${delta < -0.005 ? "text-calm" : delta > 0.005 ? "text-signal" : "opacity-70"}`}>
+                {signedPct(delta)}
+              </span>
+            </span>
             <button
               type="button"
               onClick={reset}
-              disabled={!changed}
-              className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors duration-150 hover:text-ink disabled:opacity-40"
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-night-ink/10 px-4 text-sm transition-transform duration-150 ease-out active:scale-[0.97]"
             >
               <ArrowCounterClockwiseIcon size={14} aria-hidden /> Reset
             </button>
-          </div>
-          <div className="mt-6">
-            <LeverPanel value={{ ...person.levers, ...levers }} onChange={update} />
-          </div>
-          {failed && <p className="mt-4 text-sm text-signal">Couldn&apos;t reach the model. Move a lever again in a moment.</p>}
-        </div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

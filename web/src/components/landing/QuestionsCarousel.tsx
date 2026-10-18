@@ -92,9 +92,16 @@ function Track({ cards }: { cards: Card[] }) {
               key={c.question}
               ref={i === 0 ? first : undefined}
               aria-hidden={i !== index}
-              className={`flex min-h-[340px] shrink-0 basis-[86%] select-none flex-col justify-between rounded-2xl p-6 md:basis-[56%] md:p-10 ${c.tone}`}
+              className={`flex min-h-[320px] shrink-0 basis-[86%] select-none flex-col justify-between rounded-2xl p-6 transition-opacity duration-300 ease-out md:min-h-[360px] md:basis-[56%] md:p-10 ${c.tone} ${
+                i === index ? "opacity-100" : "opacity-55"
+              }`}
             >
-              <h3 className="text-xl font-medium md:text-2xl">{c.question}</h3>
+              <div className="flex items-start justify-between gap-6">
+                <h3 className="max-w-[20ch] text-xl font-medium tracking-[-0.01em] md:text-2xl">{c.question}</h3>
+                <span className="tabular shrink-0 rounded-full border border-ink/10 bg-bg/40 px-2.5 py-1 font-mono text-xs text-ink-soft">
+                  {String(i + 1).padStart(2, "0")} / {String(cards.length).padStart(2, "0")}
+                </span>
+              </div>
               <div>
                 <p className="tabular text-[clamp(3rem,7vw,5.5rem)] font-semibold leading-none tracking-[-0.04em]">{c.stat}</p>
                 <p className="mt-4 max-w-[44ch] text-sm leading-relaxed text-ink-soft md:text-base">{c.body}</p>
@@ -103,10 +110,37 @@ function Track({ cards }: { cards: Card[] }) {
           ))}
         </motion.ul>
       </div>
-      <div className="mt-6 flex items-center justify-between">
-        <p data-testid="carousel-status" aria-live="polite" className="text-sm text-muted">
-          Question {index + 1} of {cards.length}
-        </p>
+      <div className="mt-6 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            {cards.map((c, i) => (
+              <button
+                key={c.question}
+                type="button"
+                aria-label={`Go to question ${i + 1}`}
+                aria-current={i === index ? "true" : undefined}
+                onClick={() => setIndex(i)}
+                className="group relative grid h-11 w-5 place-items-center"
+              >
+                <span
+                  aria-hidden
+                  className="block size-1.5 rounded-full bg-haze transition-colors duration-200 group-hover:bg-mist"
+                />
+                {i === index && (
+                  <motion.span
+                    aria-hidden
+                    layoutId="questions-dot"
+                    className="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-ink"
+                    transition={reduce ? { duration: 0 } : { type: "spring", duration: 0.4, bounce: 0.15 }}
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+          <p data-testid="carousel-status" aria-live="polite" className="tabular text-sm text-muted">
+            Question {index + 1} of {cards.length}
+          </p>
+        </div>
         <div className="flex gap-2">
           {[
             { d: -1, label: "Previous question", Icon: ArrowLeftIcon, disabled: index === 0 },
@@ -117,7 +151,7 @@ function Track({ cards }: { cards: Card[] }) {
               aria-label={label}
               disabled={disabled}
               onClick={() => go(d)}
-              className="grid size-10 place-items-center rounded-full border border-line transition-transform duration-150 ease-out active:scale-[0.96] enabled:hover:bg-surface disabled:opacity-35"
+              className="grid size-11 place-items-center rounded-full border border-line bg-surface/60 transition-transform duration-150 ease-out active:scale-[0.97] enabled:hover:border-ink/30 disabled:opacity-35"
             >
               <Icon size={16} />
             </button>
@@ -131,16 +165,30 @@ function Track({ cards }: { cards: Card[] }) {
 export function QuestionsCarousel() {
   const { data, error, retry } = useApi(loadCards);
   return (
-    <section data-testid="questions" aria-labelledby="questions-title" className="mx-auto max-w-[1400px] px-4 py-24 md:px-8 md:py-32">
-      <Reveal>
-        <h2 id="questions-title" className="max-w-[16ch] text-[clamp(2.25rem,4.4vw,4rem)] font-semibold leading-[1] tracking-[-0.035em]">
-          Questions leaders ask, answered with the data.
-        </h2>
-      </Reveal>
-      <div className="mt-12">
+    <section id="questions" data-testid="questions" aria-labelledby="questions-title" className="mx-auto max-w-[1400px] scroll-mt-20 px-4 py-24 md:px-8 md:py-32">
+      <div className="grid grid-cols-12 gap-y-6">
+        <p className="col-span-12 flex items-center gap-2 self-start text-sm text-muted md:col-span-3 md:pt-4">
+          <span aria-hidden className="h-px w-6 bg-mist" />
+          Insights
+        </p>
+        <Reveal className="col-span-12 md:col-span-9">
+          <h2 id="questions-title" className="max-w-[16ch] text-[clamp(2.25rem,4.4vw,4rem)] font-semibold leading-[1] tracking-[-0.035em]">
+            Questions leaders ask, answered with the data.
+          </h2>
+          <p className="mt-6 max-w-[48ch] text-lg leading-relaxed text-pretty text-muted">
+            Live figures from the model behind Retain. Swipe, drag or use the arrows.
+          </p>
+        </Reveal>
+      </div>
+      <div className="mt-12 md:mt-16">
         {data && <Track cards={data} />}
         {error && <ErrorState message={error.message} status={error.status} onRetry={retry} />}
-        {!data && !error && <Skeleton className="h-[340px]" />}
+        {!data && !error && (
+          <div aria-busy="true" aria-label="Loading insights" className="flex gap-4 overflow-hidden">
+            <Skeleton className="h-[320px] shrink-0 basis-[86%] md:h-[360px] md:basis-[56%]" />
+            <Skeleton className="h-[320px] shrink-0 basis-[86%] opacity-60 md:h-[360px] md:basis-[56%]" />
+          </div>
+        )}
       </div>
     </section>
   );

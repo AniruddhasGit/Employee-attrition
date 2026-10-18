@@ -13,10 +13,10 @@ export function KeepThemes({ themes, minGroup = 5 }: { themes: KeepTheme[]; minG
   return (
     <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
       {themes.map((t, i) => (
-        <Reveal as="li" key={t.department} delay={i * 0.06} y={16} className="flex flex-col rounded-2xl border border-line bg-surface p-6">
-          <div className="flex items-baseline justify-between gap-4">
+        <Reveal as="li" key={t.department} delay={i * 0.06} y={16} className="flex flex-col rounded-2xl border border-line bg-surface p-5 md:p-6">
+          <div className="flex items-baseline justify-between gap-4 border-b border-line pb-4">
             <h3 className="font-medium">{t.department}</h3>
-            <span className="tabular shrink-0 text-xs text-muted">{int(t.n)} answered</span>
+            <span className="tabular shrink-0 rounded-full bg-bg px-2.5 py-0.5 text-xs text-muted ring-1 ring-line">{int(t.n)} answered</span>
           </div>
           {t.hidden ? (
             <p className="mt-6 flex items-start gap-2 text-sm leading-relaxed text-muted">
@@ -30,10 +30,13 @@ export function KeepThemes({ themes, minGroup = 5 }: { themes: KeepTheme[]; minG
               {t.top.map((k, j) => (
                 <li key={k.key}>
                   <p className="flex items-baseline justify-between gap-4 text-sm">
-                    <span className={j === 0 ? "font-medium" : "text-ink-soft"}>{k.label}</span>
-                    <span className="tabular shrink-0 text-muted">{pct(k.share)}</span>
+                    <span className="flex min-w-0 items-baseline gap-2.5">
+                      <span className="tabular w-3 shrink-0 font-mono text-xs text-muted">{j + 1}</span>
+                      <span className={j === 0 ? "font-medium" : "text-ink-soft"}>{k.label}</span>
+                    </span>
+                    <span className={`tabular shrink-0 ${j === 0 ? "font-semibold text-ink" : "text-muted"}`}>{pct(k.share)}</span>
                   </p>
-                  <span className="relative mt-2 block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
+                  <span className="relative ml-[22px] mt-2 block h-1.5 overflow-hidden rounded-full bg-line" aria-hidden>
                     <motion.span
                       className="absolute inset-y-0 left-0 w-full origin-left rounded-full bg-calm"
                       style={{ opacity: 1 - j * 0.25 }}

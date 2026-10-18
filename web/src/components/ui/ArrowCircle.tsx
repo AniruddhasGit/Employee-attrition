@@ -6,7 +6,7 @@ export function ArrowCircle({ inverted = false, size = 28 }: { inverted?: boolea
     <span
       aria-hidden
       style={{ width: size, height: size }}
-      className={`inline-grid shrink-0 place-items-center rounded-full transition-transform duration-300 ease-out group-hover:rotate-45 ${
+      className={`inline-grid shrink-0 place-items-center rounded-full transition-transform duration-300 ease-out group-hover:rotate-45 group-active:rotate-45 ${
         inverted ? "bg-bg text-ink" : "bg-ink text-bg"
       }`}
     >
