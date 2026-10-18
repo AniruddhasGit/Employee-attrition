@@ -122,10 +122,17 @@ body {
   color: #fff;
 }
 
+/* Ink, not the signal accent: orange is reserved for risk. */
 :focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid var(--ink);
   outline-offset: 3px;
   border-radius: 6px;
+}
+
+/* Native dropdown lists don't inherit the page background; give options the theme's colours. */
+select option {
+  background-color: var(--surface);
+  color: var(--ink);
 }
 
 .route-enter {
