@@ -1,20 +1,16 @@
 import json
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Depends, FastAPI
 from sqlalchemy import text
 
+from api.auth import require_same_origin
 from api.db import SessionDep
 from api.settings import get_settings
 
 settings = get_settings()
-app = FastAPI(title="Retain API", version="1.0.0")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
-)
+# Browsers reach the API only through the web app's same-origin proxy, so there is no CORS.
+# Every state-changing request must carry the site's own Origin (CSRF guard).
+app = FastAPI(title="Retain API", version="1.0.0", dependencies=[Depends(require_same_origin)])
 
 
 @app.get("/api/health")
@@ -25,8 +21,9 @@ def health(session: SessionDep) -> dict:
     return {"status": "ok", "db": db_ok, "model_version": version}
 
 
-from api.routes import contact, employees, model, workforce  # noqa: E402
+from api.routes import auth, contact, employees, model, workforce  # noqa: E402
 
+app.include_router(auth.router)
 app.include_router(employees.router)
 app.include_router(model.router)
 app.include_router(workforce.router)

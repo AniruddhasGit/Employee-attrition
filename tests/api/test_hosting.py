@@ -1,4 +1,4 @@
-from api.routes.contact import client_ip
+from api.net import client_ip
 from api.settings import Settings
 
 
@@ -8,10 +8,10 @@ def test_plain_postgres_url_uses_psycopg_driver():
     assert Settings(database_url="postgres://u:p@h/db").database_url.startswith("postgresql+psycopg://")
 
 
-def test_cors_origins_accept_comma_separated_and_strip_slashes():
-    s = Settings(cors_origins="https://retain-web.onrender.com/, http://localhost:3000")
-    assert s.cors_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]
-    assert Settings(cors_origins='["https://a.example"]').cors_origins == ["https://a.example"]
+def test_site_origins_accept_comma_separated_and_strip_slashes():
+    s = Settings(site_origins="https://retain-web.onrender.com/, http://localhost:3000")
+    assert s.site_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]
+    assert Settings(site_origins='["https://a.example"]').site_origins == ["https://a.example"]
 
 
 class _Req:
@@ -28,6 +28,6 @@ def test_client_ip_trusts_edge_header_then_rightmost_forwarded_hop():
     assert client_ip(_Req({})) == "10.0.0.1"
 
 
-def test_cors_origins_from_env_comma_separated(monkeypatch):
-    monkeypatch.setenv("CORS_ORIGINS", "https://retain-web.onrender.com/,http://localhost:3000")
-    assert Settings().cors_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]
+def test_site_origins_from_env_comma_separated(monkeypatch):
+    monkeypatch.setenv("SITE_ORIGINS", "https://retain-web.onrender.com/,http://localhost:3000")
+    assert Settings().site_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]

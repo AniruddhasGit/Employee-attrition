@@ -27,7 +27,8 @@ def client():
     from api import ratelimit
 
     ratelimit.reset()
-    with TestClient(app) as c:
+    # Browsers always send Origin on writes; tests that check the CSRF guard override it.
+    with TestClient(app, headers={"Origin": "http://localhost:3000"}) as c:
         yield c
     with engine.begin() as conn:
         conn.execute(text(
@@ -46,3 +47,37 @@ def seeded(_schema):
     with SessionLocal() as s:
         run(s, get_settings().models_dir)
     return True
+
+
+ORIGIN = {"Origin": "http://localhost:3000"}
+
+
+@pytest.fixture
+def make_user():
+    """Create a user with a known password; removed again after the test."""
+    from api.auth import hash_password
+    from api.db import SessionLocal
+    from api.models import User
+
+    made = []
+
+    def _make(role="employee", employee_id=None, email=None, password="pw-correct-horse"):
+        with SessionLocal() as s:
+            u = User(email=email or f"{role}{len(made)}@test.local", role=role,
+                     password_hash=hash_password(password), employee_id=employee_id,
+                     display_name=f"Test {role}")
+            s.add(u)
+            s.commit()
+            made.append(u.id)
+            return u
+
+    yield _make
+    with engine.begin() as conn:
+        conn.execute(text("DELETE FROM sessions"))
+        for uid in made:
+            conn.execute(text("DELETE FROM users WHERE id = :i"), {"i": uid})
+
+
+def login(client, email, password="pw-correct-horse"):
+    return client.post("/api/auth/login", json={"email": email, "password": password},
+                       headers=ORIGIN)
