@@ -205,7 +205,7 @@ The IBM data is one snapshot, so the seed builds believable history:
 - Names for all 1,470 people (only the 1,233 current staff get check-ins) from fixed first/last-name lists with a fixed random seed (fictional,
   deterministic, no new dependency).
 - Three closed quarters and the current open one, relative to today (see "Quarters never go stale").
-- The last closed quarter equals the IBM values exactly (today's scores are preserved). Q1 and Q2 drift
+- The last closed quarter equals the IBM values exactly (today's scores are preserved). The two earlier quarters drift
   from it by small random steps. The open quarter is answered by about 65% of people, drifting from the last closed quarter, with about
   4% showing sharp drops.
 - Expectations for each answered check-in, weighted by that person's weak spots (low work-life balance
