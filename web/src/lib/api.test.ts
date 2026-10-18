@@ -4,7 +4,7 @@ import { ApiError, simulate } from "./api";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("api client", () => {
-  it("posts camelCase bodies to /api/simulate", async () => {
+  it("posts camelCase bodies to the same-origin /api/hr/simulate", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ before: 0.5, after: 0.3, delta: -0.2 }), { status: 200 }),
     );
@@ -12,7 +12,7 @@ describe("api client", () => {
     const out = await simulate(1004, { overTime: "No" });
     expect(out.after).toBe(0.3);
     const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toMatch(/\/api\/simulate$/);
+    expect(String(url)).toBe("/api/hr/simulate");
     expect(JSON.parse(init.body)).toEqual({ employeeId: 1004, levers: { overTime: "No" } });
   });
 

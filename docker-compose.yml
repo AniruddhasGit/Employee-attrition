@@ -23,7 +23,8 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://retain:retain@db:5432/retain
       IP_HASH_SALT: ${IP_HASH_SALT:-change-me-locally}
-      CORS_ORIGINS: '["http://localhost:3000"]'
+      SITE_ORIGINS: http://localhost:3000
+      PROXY_SECRET: ${PROXY_SECRET:-local-proxy-secret}
     ports:
       - "8010:8010"
     depends_on:
@@ -39,8 +40,9 @@ services:
   web:
     build:
       context: web
-      args:
-        NEXT_PUBLIC_API_URL: http://localhost:8010
+    environment:
+      API_ORIGIN: http://api:8010
+      PROXY_SECRET: ${PROXY_SECRET:-local-proxy-secret}
     ports:
       - "3000:3000"
     depends_on:

@@ -74,3 +74,12 @@ def test_write_without_origin_is_403(client, make_user):
                       headers={"Origin": "https://evil.example"})
     assert bad.status_code == 403
     assert login(client, u.email).status_code == 200
+
+
+def test_demo_accounts_listed_without_secrets(client, seeded):
+    r = client.get("/api/auth/demo-accounts")
+    assert r.status_code == 200
+    accounts = r.json()
+    assert len(accounts) == 5 and accounts[0]["label"] == "Priya Shah · HR manager"
+    assert all(set(a) == {"email", "label", "role"} for a in accounts)
+    assert [a["role"] for a in accounts].count("hr") == 1

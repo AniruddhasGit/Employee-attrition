@@ -1,8 +1,10 @@
-/** Typed client for the Retain API. Every call throws ApiError on failure. */
-
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8010";
+/**
+ * Typed client for the Retain API. Every call goes to this site's own /api (the web server
+ * proxies it), so the session cookie is first-party. Every call throws ApiError on failure.
+ */
 
 export type Band = "low" | "elevated" | "high";
+export type Role = "hr" | "employee";
 
 export type Driver = {
   feature: string;
@@ -12,17 +14,49 @@ export type Driver = {
   text: string;
 };
 
-export type EmployeeCard = {
-  id: number;
+export type Session = { role: Role; displayName: string; home: "/hr" | "/me" };
+export type DemoAccount = { email: string; label: string; role: Role };
+
+export type Option = { value: string | number; label: string };
+export type Question = {
+  key: keyof Answers;
+  label: string;
+  kind: "scale" | "yesno" | "travel" | "count";
+  options: Option[];
+};
+export type Travel = "Non-Travel" | "Travel_Rarely" | "Travel_Frequently";
+export type Answers = {
+  environmentSatisfaction: number;
+  jobSatisfaction: number;
+  relationshipSatisfaction: number;
+  workLifeBalance: number;
+  jobInvolvement: number;
+  overTime: "Yes" | "No";
+  businessTravel: Travel;
+  trainingTimesLastYear: number;
+};
+export type KeepOption = { key: string; label: string };
+export type TeamNote = { quarter: string; said: string; did: string };
+
+export type MeHome = {
+  displayName: string;
   department: string;
   jobRole: string;
-  jobLevel: number;
-  yearsAtCompany: number;
-  monthlyIncome: number;
-  overTime: "Yes" | "No";
-  riskScore: number;
-  riskBand: Band;
-  drivers: Driver[];
+  quarter: string;
+  checkInStatus: "open" | "done";
+  keepMe: string[];
+  comment: string | null;
+  keepMeOptions: KeepOption[];
+  updates: TeamNote[];
+  history: { quarter: string; answers: Answers; keepMe: string[]; comment: string | null }[];
+};
+
+export type CheckInForm = {
+  quarter: string;
+  notice: string;
+  questions: Question[];
+  keepMeOptions: KeepOption[];
+  current: { answers: Answers; keepMe: string[]; comment: string } | null;
 };
 
 export type Levers = {
@@ -31,11 +65,9 @@ export type Levers = {
   stockOptionLevel?: number;
   jobLevel?: number;
   trainingTimesLastYear?: number;
-  businessTravel?: "Non-Travel" | "Travel_Rarely" | "Travel_Frequently";
+  businessTravel?: Travel;
   yearsSinceLastPromotion?: number;
 };
-
-export type EmployeeDetail = EmployeeCard & { levers: Required<Levers> };
 
 export type SimulateResult = {
   before: number;
@@ -44,19 +76,6 @@ export type SimulateResult = {
   beforeBand: Band;
   afterBand: Band;
   drivers: Driver[];
-};
-
-export type MetricSet = {
-  roc_auc: number;
-  pr_auc: number;
-  precision: number;
-  recall: number;
-  f1: number;
-  accuracy: number;
-  brier: number;
-  confusion: [[number, number], [number, number]];
-  threshold: number;
-  ci?: Record<string, [number, number]>;
 };
 
 export type FairnessSlice = {
@@ -71,58 +90,109 @@ export type FairnessSlice = {
   small_sample: boolean;
 };
 
-export type Metrics = {
-  version: string;
-  threshold: number;
-  nTest: number;
-  nTestPos: number;
-  before: MetricSet;
-  after: MetricSet;
-  thresholdCurve: { threshold: number; precision: number; recall: number; f1: number }[];
-  calibration: { mean_pred: number; frac_pos: number; n: number }[];
-  fairness: FairnessSlice[];
+export type DropField = { column: string; label: string; from: number; to: number };
+export type SharpDrop = {
+  id: number;
+  name: string;
+  department: string;
+  jobRole: string;
+  riskScore: number;
+  prevRiskScore: number;
+  fields: DropField[];
+  riskJump: boolean;
 };
+export type HeatCell = { department: string; jobRole: string; n: number; meanRisk: number; expectedCost: number };
+export type KeepTheme = { department: string; n: number; hidden: boolean; top: { key: string; label: string; share: number }[] };
 
-export type DriverShare = { feature: string; text: string; share: number };
-
-export type Workforce = {
+export type Dashboard = {
+  quarter: string;
+  previousQuarter: string;
   headcount: number;
-  leavers: number;
-  meanRisk: number;
-  expectedLeavers: number;
-  expectedCost: number;
+  highRisk: number;
+  costAtStake: number;
   replacementPct: number;
-  distribution: { bin: number; count: number }[];
-  heatmap: { department: string; jobRole: string; n: number; meanRisk: number; expectedCost: number }[];
-  topDrivers: DriverShare[];
+  meanRisk: number;
+  meanRiskPrev: number | null;
+  responseRate: number;
+  sharpDrops: SharpDrop[];
+  heatmap: HeatCell[];
+  keepThemes: KeepTheme[];
+  trust: {
+    rocAuc: number;
+    prAuc: number;
+    recall: number;
+    precision: number;
+    threshold: number;
+    nTest: number;
+    fairness: FairnessSlice[];
+  };
 };
 
-export type Segment = { department?: string; jobRole?: string; overTime?: "Yes" | "No"; jobLevel?: number };
+export type PersonRow = {
+  id: number;
+  name: string;
+  department: string;
+  jobRole: string;
+  riskScore: number;
+  riskBand: Band;
+  trend: "up" | "down" | "flat";
+  answered: boolean;
+};
 
-export type SegmentStats = {
+export type ActionKey =
+  | "pay_review"
+  | "promotion"
+  | "reduce_overtime"
+  | "stock_grant"
+  | "training_plan"
+  | "reduce_travel"
+  | "stay_interview";
+
+export type Plan = {
+  id: number;
+  action: ActionKey;
   label: string;
-  n: number;
-  attritionRate: number | null;
-  meanRisk: number | null;
-  expectedCost: number;
-  topDrivers: DriverShare[];
-  smallSample: boolean;
+  note: string;
+  status: "open" | "done";
+  createdQuarter: string;
+  scoreAtCreation: number;
+  estimatedScore: number;
+  doneAt: string | null;
+  actualChange: number | null;
 };
 
-export type Hypothesis = { title: string; body: string };
+export type Person = {
+  id: number;
+  name: string;
+  department: string;
+  jobRole: string;
+  jobLevel: number;
+  yearsAtCompany: number;
+  monthlyIncome: number;
+  overTime: "Yes" | "No";
+  riskScore: number;
+  riskBand: Band;
+  drivers: Driver[];
+  levers: Required<Levers>;
+  riskHistory: { quarter: string; riskScore: number }[];
+  checkIns: { quarter: string; answers: Answers; keepMe: string[]; comment: string | null; submittedAt: string }[];
+  change: string | null;
+  plans: Plan[];
+};
 
-export type Scenario = {
-  publicId: string;
-  employee: EmployeeCard;
-  levers: Levers;
-  before: number;
-  after: number;
-  delta: number;
-  createdAt: string;
+export type CheckInStatus = {
+  quarter: string;
+  responseRate: number;
+  byDepartment: { department: string; answered: number; total: number }[];
+  missing: { id: number; name: string; department: string; jobRole: string }[];
+  updates: (TeamNote & { id: number; department: string })[];
 };
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -131,13 +201,15 @@ export class ApiError extends Error {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(path, {
       ...init,
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json", ...init?.headers },
     });
   } catch {
     throw new ApiError(0, "Can't reach the model right now.");
   }
+  if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => null);
   if (!res.ok) {
     const detail = body?.detail;
@@ -147,50 +219,38 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
+const post = <T>(path: string, body: unknown, method = "POST") =>
+  request<T>(path, { method, body: JSON.stringify(body) });
+
 function qs(params: Record<string, string | number | undefined>): string {
   const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== "");
   return entries.length ? `?${new URLSearchParams(entries.map(([k, v]) => [k, String(v)]))}` : "";
 }
 
-export const listEmployees = (p: {
-  department?: string; jobRole?: string; band?: Band; sort?: "risk" | "id"; limit?: number; offset?: number;
-} = {}) => request<{ items: EmployeeCard[]; total: number }>(`/api/employees${qs(p)}`);
+// Auth
+export const signIn = (email: string, password: string) => post<Session>("/api/auth/login", { email, password });
+export const signOut = () => post<void>("/api/auth/logout", {});
+export const getSession = () => request<Session>("/api/auth/me");
+export const getDemoAccounts = () => request<DemoAccount[]>("/api/auth/demo-accounts");
 
-export const randomEmployee = (band?: Band) =>
-  request<EmployeeCard>(`/api/employees/random${qs({ band })}`);
+// Employee
+export const getMe = () => request<MeHome>("/api/me");
+export const getCheckInForm = () => request<CheckInForm>("/api/me/check-in");
+export const submitCheckIn = (body: { answers: Answers; keepMe: string[]; comment: string }) =>
+  post<{ quarter: string; status: "done" }>("/api/me/check-in", body);
 
-export const getEmployee = (id: number) => request<EmployeeDetail>(`/api/employees/${id}`);
-
+// HR
+export const getDashboard = (replacementPct = 50) => request<Dashboard>(`/api/hr/dashboard${qs({ replacementPct })}`);
+export const listPeople = (p: { search?: string; department?: string; band?: Band; limit?: number; offset?: number } = {}) =>
+  request<{ items: PersonRow[]; total: number }>(`/api/hr/people${qs(p)}`);
+export const getPerson = (id: number) => request<Person>(`/api/hr/people/${id}`);
 export const simulate = (employeeId: number, levers: Levers) =>
-  request<SimulateResult>("/api/simulate", {
-    method: "POST",
-    body: JSON.stringify({ employeeId, levers }),
-  });
-
-export const getMetrics = () => request<Metrics>("/api/model/metrics");
-
-export const getWorkforce = (replacementPct = 50) =>
-  request<Workforce>(`/api/workforce/summary${qs({ replacementPct })}`);
-
-export const compareSegments = (a: Segment, b: Segment, replacementPct = 50) => {
-  const params: Record<string, string | number | undefined> = { replacementPct };
-  for (const [side, seg] of [["a", a], ["b", b]] as const) {
-    for (const [k, v] of Object.entries(seg)) params[`${side}.${k}`] = v;
-  }
-  return request<{ a: SegmentStats; b: SegmentStats }>(`/api/workforce/compare${qs(params)}`);
-};
-
-export const getHypotheses = () => request<Record<string, Hypothesis>>("/api/hypotheses");
-
-export const saveScenario = (employeeId: number, levers: Levers) =>
-  request<{ publicId: string }>("/api/scenarios", {
-    method: "POST",
-    body: JSON.stringify({ employeeId, levers }),
-  });
-
-export const getScenario = (publicId: string) =>
-  request<Scenario>(`/api/scenarios/${encodeURIComponent(publicId)}`);
-
-export const sendContact = (body: {
-  name: string; email: string; message: string; consent: boolean; website: string;
-}) => request<{ ok: true }>("/api/contact", { method: "POST", body: JSON.stringify(body) });
+  post<SimulateResult>("/api/hr/simulate", { employeeId, levers });
+export const createPlan = (employeeId: number, action: ActionKey, note = "") =>
+  post<Plan>(`/api/hr/people/${employeeId}/plans`, { action, note });
+export const markPlanDone = (planId: number) => post<Plan>(`/api/hr/plans/${planId}`, { status: "done" }, "PATCH");
+export const getCheckIns = () => request<CheckInStatus>("/api/hr/check-ins");
+export const postUpdate = (body: { department: string; said: string; did: string }) =>
+  post<TeamNote & { id: number; department: string }>("/api/hr/updates", body);
+export const sendContact = (body: { name: string; email: string; message: string; consent: boolean; website: string }) =>
+  post<{ ok: true }>("/api/contact", body);

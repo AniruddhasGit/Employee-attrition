@@ -64,3 +64,10 @@ def logout(request: Request, db: SessionDep) -> Response:
 @router.get("/me", response_model=Me, response_model_by_alias=True)
 def me(user: CurrentUser):
     return _me(user)
+
+
+@router.get("/demo-accounts")
+def demo_accounts(db: SessionDep) -> list[dict]:
+    """The five public demo sign-ins (fictional people; the password is shown on the page)."""
+    return [{"email": p["email"], "label": p["label"], "role": p["role"]}
+            for p in demo.personas(db)]
