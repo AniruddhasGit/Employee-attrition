@@ -12,7 +12,7 @@ from datetime import UTC, date, datetime, time, timedelta
 import pandas as pd
 from sqlalchemy import delete, insert, select, update
 
-from api.auth import hash_password
+from api.auth import hash_password, verify_password
 from api.models import ActionPlan, CheckIn, DemoState, Employee, TeamUpdate, User
 from api.models import Session as UserSession
 from api.people import rescore
@@ -507,3 +507,19 @@ def maybe_reset(db, now: datetime, allow_full: bool = True) -> bool:
         return True
     return False
 
+
+
+def sync_passwords(db) -> int:
+    """Make the demo accounts' password match DEMO_PASSWORD; returns how many were rehashed.
+
+    Runs at startup, so changing the password on the host needs no reseed.
+    """
+    password = get_settings().demo_password
+    users = db.scalars(select(User).where(User.email.like(f"%@{DOMAIN}"))).all()
+    stale = [u for u in users if not verify_password(u.password_hash, password)]
+    if stale:
+        new_hash = hash_password(password)
+        for u in stale:
+            u.password_hash = new_hash
+        db.commit()
+    return len(stale)

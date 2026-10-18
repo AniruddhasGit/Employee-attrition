@@ -37,7 +37,8 @@ REGION = "singapore"
 PROJECT = "Retain"
 API_NAME, WEB_NAME = "retain-api", "retain-web"
 HEALTH = {API_NAME: "/api/health"}
-DEMO_PASSWORD = "retain-demo"
+# The hosted demo uses a private password: set DEMO_PASSWORD in the env or .env.deploy.
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "retain-demo")
 KEY = os.environ.get("RENDER_API_KEY", "")
 
 

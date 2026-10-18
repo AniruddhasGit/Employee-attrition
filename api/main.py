@@ -14,11 +14,13 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    """Clear yesterday's visitor edits when a sleeping free instance wakes up."""
+    """Clear yesterday's visitor edits when a sleeping free instance wakes up, and apply
+    the configured demo password."""
     from api import demo
 
     with SessionLocal() as db:
         demo.maybe_reset(db, datetime.now(UTC), allow_full=False)
+        demo.sync_passwords(db)
     yield
 
 # Browsers reach the API only through the web app's same-origin proxy, so there is no CORS.

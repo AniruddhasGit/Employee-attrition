@@ -36,3 +36,4 @@ models/
 .pytest_cache/
 .ruff_cache/
 .playwright-mcp/
+passwords.txt

@@ -76,13 +76,28 @@ def test_write_without_origin_is_403(client, make_user):
     assert login(client, u.email).status_code == 200
 
 
-def test_demo_accounts_listed_without_secrets(client, seeded):
-    r = client.get("/api/auth/demo-accounts")
-    assert r.status_code == 200
-    accounts = r.json()
-    assert len(accounts) == 5 and accounts[0]["label"] == "Priya Shah · HR manager"
-    assert all(set(a) == {"email", "label", "role"} for a in accounts)
-    assert [a["role"] for a in accounts].count("hr") == 1
+def test_demo_accounts_are_not_listed_publicly(client, seeded):
+    assert client.get("/api/auth/demo-accounts").status_code in (404, 405)
+
+
+def test_demo_passwords_follow_the_setting(seeded, monkeypatch):
+    """Changing DEMO_PASSWORD on the host takes effect at the next start, without a reseed."""
+    from api import demo
+    from api.auth import verify_password
+    from api.db import SessionLocal
+    from api.models import User
+    from api.settings import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "demo_password", "a-much-longer-secret")
+    with SessionLocal() as s:
+        assert demo.sync_passwords(s) == 5
+        users = s.query(User).filter(User.email.like("%@retain.demo")).all()
+        assert all(verify_password(u.password_hash, "a-much-longer-secret") for u in users)
+        assert demo.sync_passwords(s) == 0  # already current: nothing rehashed
+    monkeypatch.setattr(settings, "demo_password", "retain-demo")
+    with SessionLocal() as s:
+        demo.sync_passwords(s)
 
 
 def test_successful_sign_ins_are_not_rate_limited(client, make_user):

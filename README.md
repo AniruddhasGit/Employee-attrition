@@ -26,7 +26,10 @@ Gender, age and marital status are never model inputs. They appear only in the f
 
 ### Demo accounts
 
-All five share the password `retain-demo`; the sign-in page lists them as buttons.
+The sign-in page does not list them. Locally all five use the password `retain-demo` (`DEMO_PASSWORD`).
+The hosted site uses a private password set on Render; the owner keeps the hosted logins in a
+git-ignored `passwords.txt` at the repo root. Each account's email is listed by
+`python -c "from api import demo; from api.db import SessionLocal; print(demo.personas(SessionLocal()))"`.
 
 | Account | Story |
 |---|---|
