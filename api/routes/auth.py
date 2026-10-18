@@ -35,13 +35,15 @@ def _me(user: User) -> Me:
 @router.post("/login", response_model=Me, response_model_by_alias=True)
 def login(body: LoginIn, request: Request, response: Response, db: SessionDep):
     email = body.email.strip().lower()
-    ip_ok = ratelimit.allow(f"login-ip:{client_ip(request)}", ATTEMPTS, WINDOW_S)
-    email_ok = ratelimit.allow(f"login-email:{email}", ATTEMPTS, WINDOW_S)
-    if not (ip_ok and email_ok):
-        raise HTTPException(429, "Too many sign-in attempts. Wait 15 minutes and sign in again.")
+    # Only failed attempts count: many prospects share one demo account.
+    keys = (f"login-ip:{client_ip(request)}", f"login-email:{email}")
+    if any(ratelimit.blocked(k, ATTEMPTS, WINDOW_S) for k in keys):
+        raise HTTPException(429, "Too many failed sign-ins. Wait 15 minutes and sign in again.")
     demo.maybe_reset(db, datetime.now(UTC), allow_full=False)
     user = db.scalars(select(User).where(func.lower(User.email) == email)).first()
     if not verify_password(user.password_hash if user else None, body.password):
+        for k in keys:
+            ratelimit.record(k)
         raise HTTPException(401, "Email or password is wrong.")
     settings = get_settings()
     response.set_cookie(

@@ -14,25 +14,25 @@ export function Nav() {
         <ul className="hidden items-center gap-8 text-sm md:flex">
           {SITE.nav.map((item) => (
             <li key={item.href}>
-              <Link href={item.href} className="group inline-flex items-center gap-1.5 text-ink-soft hover:text-ink">
+              <Link href={item.href} className="text-ink-soft hover:text-ink">
                 {item.label}
-                <ArrowRightIcon size={12} className="transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
             </li>
           ))}
+          <li>
+            <Link href="/#contact" className="text-ink-soft hover:text-ink">
+              Get in touch
+            </Link>
+          </li>
         </ul>
-        <Link href="/#contact" className="group inline-flex items-center gap-1.5 text-sm font-medium">
-          Get in touch
+        <Link
+          href="/login"
+          className="group inline-flex items-center gap-1.5 rounded-full bg-ink px-4 py-1.5 text-sm font-medium text-bg transition-transform duration-150 ease-out active:scale-[0.97]"
+        >
+          Sign in
           <ArrowRightIcon size={12} className="transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </nav>
-      <ul className="flex items-center gap-6 px-4 text-sm md:hidden">
-        {SITE.nav.map((item) => (
-          <li key={item.href}>
-            <Link href={item.href} className="text-ink-soft">{item.label}</Link>
-          </li>
-        ))}
-      </ul>
     </header>
   );
 }

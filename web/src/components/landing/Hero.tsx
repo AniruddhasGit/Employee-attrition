@@ -8,10 +8,10 @@ import { PillButton } from "@/components/ui/PillButton";
 import { EASE_IN_OUT, EASE_OUT } from "@/lib/motion";
 
 const INDEX = [
-  { n: "01", label: "Predict", href: "/explore" },
-  { n: "02", label: "Simulate", href: "/explore/1004" },
-  { n: "03", label: "Explain", href: "/honesty" },
-  { n: "04", label: "Retain", href: "/workforce" },
+  { n: "01", label: "Check in", href: "#check-in" },
+  { n: "02", label: "Predict", href: "#predict" },
+  { n: "03", label: "Act", href: "#act" },
+  { n: "04", label: "Retain", href: "#retain" },
 ];
 
 /** Letters rise out of a mask, staggered. Words never break mid-word. */
@@ -121,7 +121,7 @@ export function Hero() {
                 animate={{ opacity: 1, transform: "translateY(0px)" }}
                 transition={{ duration: 0.6, delay: 1.1, ease: EASE_OUT }}
               >
-                <PillButton href="/explore">Open the explorer</PillButton>
+                <PillButton href="/login">Sign in</PillButton>
               </motion.div>
             </div>
             <div className="col-span-12 md:row-start-2">
@@ -131,8 +131,8 @@ export function Hero() {
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.8, ease: EASE_OUT }}
               >
-                We rebuilt a leaky attrition model and kept the receipts. See what it gets right, and
-                where it doesn&apos;t.
+                Quarterly check-ins, an honest model and a plan for every person at risk, so you
+                keep the people you&apos;d hate to lose.
               </motion.p>
               <span aria-hidden className="block text-[clamp(3.25rem,11vw,10.5rem)]">
                 <Letters text="Why people" delay={0} reduce={reduce} />

@@ -2,7 +2,7 @@
 
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 import { useRef } from "react";
-import { getMetrics, type MetricSet, type Metrics } from "@/lib/api";
+import { getPublicSummary, type MetricSet, type Metrics } from "@/lib/api";
 import { int } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -21,6 +21,8 @@ const BUGS = [
   { title: "Categories zeroed", body: "Scoring one row at a time dropped every category: overtime, job role, department, travel." },
   { title: "A 0.9 cut-off called confidence", body: "An 89% chance of leaving was printed as \"Likely to Stay\"." },
 ];
+
+const loadMetrics = () => getPublicSummary().then((s) => s.metrics);
 
 function flagged(m: MetricSet) {
   const [[tn, fp], [fn, tp]] = m.confusion;
@@ -151,7 +153,7 @@ function StaticStory({ m }: { m: Metrics }) {
 
 export function BeforeAfter() {
   const reduce = useReducedMotion();
-  const { data, error, loading, retry } = useApi(getMetrics);
+  const { data, error, loading, retry } = useApi(loadMetrics);
 
   return (
     <section data-testid="before-after" aria-labelledby="before-after-title" className="bg-surface">

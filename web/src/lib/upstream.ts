@@ -20,7 +20,14 @@ export function clientIpFrom(headers: Headers): string | null {
   return hops.at(-1) ?? null;
 }
 
-export function buildUpstream(req: Request, apiOrigin: string, secret: string, clientIp: string | null): Request {
+export type Upstream = { url: string; init: RequestInit & { headers: Headers } };
+
+export async function buildUpstream(
+  req: Request,
+  apiOrigin: string,
+  secret: string,
+  clientIp: string | null,
+): Promise<Upstream> {
   const url = new URL(req.url);
   const headers = new Headers();
   for (const name of FORWARDED) {
@@ -29,13 +36,12 @@ export function buildUpstream(req: Request, apiOrigin: string, secret: string, c
   }
   if (secret) headers.set("x-retain-proxy-secret", secret);
   if (clientIp) headers.set("x-retain-client-ip", clientIp);
-  const hasBody = !["GET", "HEAD"].includes(req.method);
-  return new Request(`${apiOrigin.replace(/\/$/, "")}${url.pathname}${url.search}`, {
-    method: req.method,
-    headers,
-    body: hasBody ? req.body : undefined,
-    // Required by Node's fetch when streaming a request body.
-    ...(hasBody ? { duplex: "half" } : {}),
-    redirect: "manual",
-  } as RequestInit);
+  // A buffered body passed straight to fetch, never wrapped in a Request: per the fetch spec a 401
+  // answer to a streamed body is a network error, which turned "wrong password" into "can't reach
+  // the server". Bodies here are tiny.
+  const body = ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer();
+  return {
+    url: `${apiOrigin.replace(/\/$/, "")}${url.pathname}${url.search}`,
+    init: { method: req.method, headers, body, redirect: "manual" },
+  };
 }

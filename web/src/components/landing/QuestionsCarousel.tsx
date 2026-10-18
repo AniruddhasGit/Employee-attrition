@@ -3,7 +3,7 @@
 import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { compareSegments, getMetrics, getWorkforce } from "@/lib/api";
+import { getPublicSummary } from "@/lib/api";
 import { pct } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -13,31 +13,25 @@ import { Skeleton } from "@/components/ui/Skeleton";
 type Card = { question: string; stat: string; body: string; tone: string };
 
 async function loadCards(): Promise<Card[]> {
-  const [wf, metrics, ot] = await Promise.all([
-    getWorkforce(),
-    getMetrics(),
-    compareSegments({ overTime: "Yes" }, { overTime: "No" }),
-  ]);
-  const risky = [...wf.heatmap].filter((c) => c.n >= 10).sort((a, b) => b.meanRisk - a.meanRisk)[0];
-  const driver = wf.topDrivers[0];
+  const { riskiest, overtime, topDriver, metrics } = await getPublicSummary();
   const [lo, hi] = metrics.after.ci?.roc_auc ?? [0, 0];
   return [
     {
       question: "Who is most at risk?",
-      stat: pct(risky.meanRisk),
-      body: `${risky.jobRole}s in ${risky.department} have the highest average risk score, across ${risky.n} people.`,
+      stat: pct(riskiest.meanRisk),
+      body: `${riskiest.jobRole}s in ${riskiest.department} have the highest average risk score, across ${riskiest.n} people.`,
       tone: "bg-[radial-gradient(120%_120%_at_80%_0%,var(--hero-c),var(--hero-a))]",
     },
     {
       question: "Does overtime matter?",
-      stat: `${pct(ot.a.attritionRate ?? 0)} vs ${pct(ot.b.attritionRate ?? 0)}`,
-      body: `People who worked overtime left at about ${((ot.a.attritionRate ?? 0) / (ot.b.attritionRate || 1)).toFixed(1)} times the rate of those who didn't.`,
+      stat: `${pct(overtime.yes)} vs ${pct(overtime.no)}`,
+      body: `People who worked overtime left at about ${(overtime.yes / (overtime.no || 1)).toFixed(1)} times the rate of those who didn't.`,
       tone: "bg-surface border border-line",
     },
     {
       question: "What raises risk most often?",
-      stat: pct(driver.share),
-      body: `of employees have "${driver.text.toLowerCase()}" among the factors pushing their score up.`,
+      stat: pct(topDriver.share),
+      body: `of employees have ${topDriver.text} among the factors pushing their score up.`,
       tone: "bg-signal-soft",
     },
     {

@@ -83,3 +83,9 @@ def test_demo_accounts_listed_without_secrets(client, seeded):
     assert len(accounts) == 5 and accounts[0]["label"] == "Priya Shah · HR manager"
     assert all(set(a) == {"email", "label", "role"} for a in accounts)
     assert [a["role"] for a in accounts].count("hr") == 1
+
+
+def test_successful_sign_ins_are_not_rate_limited(client, make_user):
+    """Many prospects share one demo account; only failed attempts count toward the limit."""
+    u = make_user("hr")
+    assert all(login(client, u.email).status_code == 200 for _ in range(15))

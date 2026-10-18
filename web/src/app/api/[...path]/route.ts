@@ -8,11 +8,12 @@ async function forward(req: Request): Promise<Response> {
     console.error("API_ORIGIN is not set; the web app cannot reach the API.");
     return Response.json({ detail: "Can't reach the model right now." }, { status: 502 });
   }
-  const upstream = buildUpstream(req, apiOrigin, process.env.PROXY_SECRET ?? "", clientIpFrom(req.headers));
+  const upstream = await buildUpstream(req, apiOrigin, process.env.PROXY_SECRET ?? "", clientIpFrom(req.headers));
   let res: Response;
   try {
-    res = await fetch(upstream, { cache: "no-store" });
-  } catch {
+    res = await fetch(upstream.url, { ...upstream.init, cache: "no-store" });
+  } catch (err) {
+    console.error("API proxy failed", upstream.init.method, upstream.url, err);
     return Response.json({ detail: "Can't reach the model right now." }, { status: 502 });
   }
   const headers = new Headers();

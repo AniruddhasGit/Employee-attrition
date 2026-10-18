@@ -1,16 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-test("live demo: flipping overtime changes the risk score", async ({ page }) => {
-  await page.goto("/");
-  const demo = page.getByTestId("live-demo");
-  await demo.scrollIntoViewIfNeeded();
-  const risk = demo.getByTestId("demo-risk");
-  await expect(risk).toHaveText(/\d+%/);
-  const before = await risk.textContent();
-  await demo.getByRole("switch", { name: /overtime/i }).click();
-  await expect(risk).not.toHaveText(before!);
-});
-
 test("questions carousel advances by button and by drag", async ({ page }) => {
   await page.goto("/");
   const carousel = page.getByTestId("questions");

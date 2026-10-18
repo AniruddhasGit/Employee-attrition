@@ -78,6 +78,28 @@ export type SimulateResult = {
   drivers: Driver[];
 };
 
+export type MetricSet = {
+  roc_auc: number;
+  pr_auc: number;
+  precision: number;
+  recall: number;
+  f1: number;
+  accuracy: number;
+  brier: number;
+  confusion: [[number, number], [number, number]];
+  threshold: number;
+  ci?: Record<string, [number, number]>;
+};
+export type Metrics = { before: MetricSet; after: MetricSet; nTest: number };
+
+/** Company-wide figures for the public landing page (aggregates only). */
+export type PublicSummary = {
+  metrics: Metrics;
+  riskiest: { department: string; jobRole: string; n: number; meanRisk: number };
+  overtime: { yes: number; no: number };
+  topDriver: { text: string; share: number };
+};
+
 export type FairnessSlice = {
   group: "Gender" | "AgeBand" | "MaritalStatus";
   value: string;
@@ -252,5 +274,6 @@ export const markPlanDone = (planId: number) => post<Plan>(`/api/hr/plans/${plan
 export const getCheckIns = () => request<CheckInStatus>("/api/hr/check-ins");
 export const postUpdate = (body: { department: string; said: string; did: string }) =>
   post<TeamNote & { id: number; department: string }>("/api/hr/updates", body);
+export const getPublicSummary = () => request<PublicSummary>("/api/public/summary");
 export const sendContact = (body: { name: string; email: string; message: string; consent: boolean; website: string }) =>
   post<{ ok: true }>("/api/contact", body);

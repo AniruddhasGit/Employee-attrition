@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildUpstream, clientIpFrom } from "./upstream";
+import { buildUpstream as build, clientIpFrom } from "./upstream";
+
+/** The upstream call as a Request, so tests can read it the way fetch will send it. */
+async function buildUpstream(...args: Parameters<typeof build>) {
+  const { url, init } = await build(...args);
+  return new Request(url, init);
+}
 
 const API = "http://api.internal:8010";
 
@@ -8,14 +14,14 @@ function incoming(path: string, init: RequestInit = {}) {
 }
 
 describe("buildUpstream", () => {
-  it("targets the API with the same path and query", () => {
-    const req = buildUpstream(incoming("/api/hr/people?search=tan&limit=5"), API, "s3cret", "1.2.3.4");
+  it("targets the API with the same path and query", async () => {
+    const req = await buildUpstream(incoming("/api/hr/people?search=tan&limit=5"), API, "s3cret", "1.2.3.4");
     expect(req.url).toBe(`${API}/api/hr/people?search=tan&limit=5`);
     expect(req.method).toBe("GET");
   });
 
   it("forwards method, cookie, origin and content type", async () => {
-    const req = buildUpstream(
+    const req = await buildUpstream(
       incoming("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ email: "a@b.c" }),
@@ -36,8 +42,8 @@ describe("buildUpstream", () => {
     expect(await req.text()).toBe(JSON.stringify({ email: "a@b.c" }));
   });
 
-  it("adds the client IP and the proxy secret from config, never from the browser", () => {
-    const req = buildUpstream(
+  it("adds the client IP and the proxy secret from config, never from the browser", async () => {
+    const req = await buildUpstream(
       incoming("/api/me", { headers: { "x-retain-proxy-secret": "forged", "x-retain-client-ip": "6.6.6.6" } }),
       API,
       "s3cret",
@@ -47,8 +53,8 @@ describe("buildUpstream", () => {
     expect(req.headers.get("x-retain-client-ip")).toBe("1.2.3.4");
   });
 
-  it("drops the client IP header when it is unknown, and never sends host", () => {
-    const req = buildUpstream(incoming("/api/me", { headers: { "x-retain-client-ip": "6.6.6.6" } }), API, "", null);
+  it("drops the client IP header when it is unknown, and never sends host", async () => {
+    const req = await buildUpstream(incoming("/api/me", { headers: { "x-retain-client-ip": "6.6.6.6" } }), API, "", null);
     expect(req.headers.get("x-retain-client-ip")).toBeNull();
     expect(req.headers.get("host")).toBeNull();
   });

@@ -6,12 +6,12 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Tag } from "@/components/ui/Tag";
 
 const STATEMENT =
-  "An attrition model that looked perfect, four reasons it wasn't, and a rebuild that says what it doesn't know.";
+  "Exit interviews tell you why people left. Retain tells you while there is still time to keep them.";
 
 const TAGS = [
-  "Held-out testing",
-  "Calibrated risk scores",
-  "Plain-English drivers",
+  "Quarterly check-ins",
+  "Plain-English risk drivers",
+  "Action plans that are measured",
   "Fairness audit",
   "No protected inputs",
 ];
@@ -50,9 +50,9 @@ export function About() {
           </h2>
           <Reveal delay={0.1}>
             <p className="mt-8 max-w-[58ch] leading-relaxed text-muted">
-              The original notebook scored employees it had already trained on, and quietly switched
-              off every category it used, from overtime to job role. The version here is tested on people it never saw, explains every
-              score, and checks itself for bias.
+              Employees answer a short check-in each quarter. An attrition model, tested on people it
+              never saw, turns those answers into a risk score HR can read in plain words, and every
+              action HR takes is measured against the next quarter&apos;s answers.
             </p>
           </Reveal>
           <ul className="mt-10 flex flex-wrap gap-2.5">

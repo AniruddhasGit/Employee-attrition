@@ -9,12 +9,12 @@ export function ErrorState({ message, status = 0, onRetry }: { message?: string;
       <p className="font-medium">{unreachable ? "Can't reach the model right now." : "Something went wrong."}</p>
       <p className="text-sm text-muted">
         {unreachable
-          ? "It runs on free hosting that sleeps when idle, so the first request can take up to a minute. Try again in a moment."
+          ? "It runs on free hosting that sleeps when idle, so the first request can take up to a minute. Give it a moment, then reload."
           : message}
       </p>
       {onRetry && (
         <button onClick={onRetry} className="rounded-full border border-line px-4 py-1.5 text-sm transition-transform duration-150 ease-out hover:bg-bg active:scale-[0.97]">
-          Try again
+          Reload
         </button>
       )}
     </div>

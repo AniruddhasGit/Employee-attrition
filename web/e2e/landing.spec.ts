@@ -3,10 +3,10 @@ import { expect, test } from "@playwright/test";
 test("hero shows headline, feature index and primary CTA", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(/why people leave/i);
-  for (const label of ["Predict", "Simulate", "Explain", "Retain"]) {
+  for (const label of ["Check in", "Predict", "Act", "Retain"]) {
     await expect(page.getByRole("link", { name: new RegExp(label) }).first()).toBeVisible();
   }
-  await expect(page.getByRole("link", { name: /open the explorer/i }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /^sign in/i }).first()).toBeVisible();
 });
 
 test("before/after story moves from the leaky numbers to the honest ones", async ({ page }) => {
@@ -17,7 +17,7 @@ test("before/after story moves from the leaky numbers to the honest ones", async
     const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;
     window.scrollTo(0, el.offsetTop);
   });
-  const m = await (await page.request.get("http://localhost:8010/api/model/metrics")).json();
+  const { metrics: m } = await (await page.request.get("http://localhost:8010/api/public/summary")).json();
   await expect(story).toContainText(m.before.roc_auc.toFixed(3));
   await page.evaluate(() => {
     const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;

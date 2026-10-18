@@ -6,9 +6,8 @@ export const SITE = {
   repo: "https://github.com/AniruddhasGit/Employee-attrition",
   email: "mailto:aniruddha.jathar@us.dynpro.com",
   disclaimer: "Fictional IBM data. Patterns, not verdicts on people.",
-  nav: [
-    { href: "/explore", label: "Explore" },
-    { href: "/workforce", label: "Workforce" },
-    { href: "/honesty", label: "Honesty" },
-  ],
+  nav: [{ href: "/#how-it-works", label: "How it works" }],
 } as const;
+
+/** Shared password of the five public demo accounts (fictional people; the API's DEMO_PASSWORD). */
+export const DEMO_PASSWORD = "retain-demo";
