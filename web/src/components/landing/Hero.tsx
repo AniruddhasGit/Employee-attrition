@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
-import { HeroHaze } from "./HeroHaze";
+import { HeroCrowd } from "./HeroCrowd";
 import { PillButton } from "@/components/ui/PillButton";
-import { EASE_IN_OUT, EASE_OUT } from "@/lib/motion";
+import { EASE_OUT } from "@/lib/motion";
 
 const INDEX = [
   { n: "01", label: "Check in", href: "#check-in" },
@@ -44,7 +44,7 @@ function Letters({ text, delay, reduce }: { text: string; delay: number; reduce:
 export function Hero() {
   const reduce = useReducedMotion() ?? false;
   const ref = useRef<HTMLElement>(null);
-  // Parallax on the way out: type lifts and fades faster than the mist drifts.
+  // Parallax on the way out: type lifts and fades faster than the crowd drifts.
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const contentTransform = useTransform(scrollYProgress, (v) => (reduce ? "none" : `translateY(${v * -120}px)`));
   const contentOpacity = useTransform(scrollYProgress, [0, 0.7], [1, reduce ? 1 : 0]);
@@ -54,29 +54,8 @@ export function Hero() {
     <section ref={ref} aria-labelledby="hero-title" className="p-2">
       <div className="relative isolate flex min-h-[calc(100dvh-1rem)] flex-col overflow-hidden rounded-2xl bg-[radial-gradient(120%_90%_at_70%_20%,var(--hero-c)_0%,var(--hero-a)_45%,var(--hero-b)_100%)]">
         <motion.div className="absolute inset-0" style={{ transform: hazeTransform }}>
-          <HeroHaze />
+          <HeroCrowd />
         </motion.div>
-
-        {/* A single drawn arc, echoing the orbit the particles leave along. */}
-        <svg
-          aria-hidden
-          viewBox="0 0 600 600"
-          className="pointer-events-none absolute left-[18%] top-[16%] h-[64%] w-auto opacity-60 max-md:hidden"
-        >
-          <motion.ellipse
-            cx="300"
-            cy="300"
-            rx="210"
-            ry="270"
-            fill="none"
-            stroke="var(--surface)"
-            strokeWidth="1"
-            transform="rotate(-24 300 300)"
-            initial={{ pathLength: reduce ? 1 : 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ duration: 2.2, delay: 0.4, ease: EASE_IN_OUT }}
-          />
-        </svg>
 
         <motion.div
           style={{ transform: contentTransform, opacity: contentOpacity }}
