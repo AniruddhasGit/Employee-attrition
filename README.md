@@ -14,13 +14,13 @@ shows two problems:
 - Its single-employee encoding silently zeroed every categorical input (overtime, job role, …),
   so at its 0.9 cut-off it flagged **532 of 1,470 employees (36%)** as leavers.
 
-| Metric | Before: original predictor, in-sample, cut-off 0.9 | After: held-out, 294 employees, cut-off 0.282 | 95% CI (after) |
+| Metric | Before: original predictor, in-sample, cut-off 0.9 | After: held-out, 294 employees, cut-off 0.224 | 95% CI (after) |
 |---|---|---|---|
-| ROC-AUC | 0.964 | **0.790** | 0.706 – 0.867 |
-| PR-AUC | 0.840 | **0.547** | 0.409 – 0.692 |
-| Precision | 0.438 | **0.488** | 0.333 – 0.633 |
-| Recall | 0.983 | **0.447** | 0.302 – 0.595 |
-| Brier score (lower is better) | 0.439 | **0.101** | 0.075 – 0.126 |
+| ROC-AUC | 0.964 | **0.795** | 0.713 – 0.873 |
+| PR-AUC | 0.840 | **0.551** | 0.412 – 0.691 |
+| Precision | 0.438 | **0.488** | 0.333 – 0.639 |
+| Recall | 0.983 | **0.425** | 0.283 – 0.568 |
+| Brier score (lower is better) | 0.439 | **0.103** | 0.077 – 0.129 |
 
 The two columns aren't measured the same way. The "before" column is what the old code would
 have claimed. The "after" column is what the model actually achieves on employees it has never seen.
@@ -48,7 +48,7 @@ flowchart LR
     CSV[(IBM HR CSV<br/>1,470 fictional employees)] --> D[ml.data<br/>clean + EmployeeID]
     D --> F[ml.features<br/>27 inputs, no gender/age/marital]
     F --> S{80/20 stratified split}
-    S -->|train| P[encode → SMOTE → XGBoost<br/>+ isotonic calibration]
+    S -->|train| P[encode → SMOTE → XGBoost<br/>+ sigmoid calibration]
     P -->|5-fold OOF| T[threshold = max F1]
     S -->|test, untouched| E[ml.evaluate<br/>metrics + bootstrap CIs]
     T --> E

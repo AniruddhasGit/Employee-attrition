@@ -29,8 +29,9 @@ tenure and promotion history, training, work-life balance.
    used for training or tuning.
 2. Pipeline: one-hot encoding → SMOTE (on training rows only) → XGBoost with the original
    notebook's hyperparameters.
-3. The pipeline is wrapped in isotonic calibration (3-fold), because SMOTE inflates probabilities.
-4. **Threshold = 0.282.** It is the cut-off that maximised F1 on 5-fold out-of-fold predictions
+3. The pipeline is wrapped in sigmoid (Platt) calibration (3-fold), because SMOTE inflates
+   probabilities. Isotonic calibration was tried first, but it pinned some people at exactly 100%.
+4. **Threshold = 0.224.** It is the cut-off that maximised F1 on 5-fold out-of-fold predictions
    within the training set.
 5. Every risk score shown in the app is **out-of-fold**: 5-fold cross-validation over all 1,470
    employees, so each person is scored by a model that never saw them. The what-if simulator
@@ -38,17 +39,17 @@ tenure and promotion history, training, work-life balance.
 
 ## Results
 
-| Metric | Before: original predictor, in-sample, 1,470 rows, cut-off 0.9 | After: held-out, 294 rows, cut-off 0.282 | 95% CI (after) |
+| Metric | Before: original predictor, in-sample, 1,470 rows, cut-off 0.9 | After: held-out, 294 rows, cut-off 0.224 | 95% CI (after) |
 |---|---|---|---|
-| ROC-AUC | 0.964 | **0.790** | 0.706 – 0.867 |
-| PR-AUC | 0.840 | **0.547** | 0.409 – 0.692 |
-| Precision | 0.438 | **0.488** | 0.333 – 0.633 |
-| Recall | 0.983 | **0.447** | 0.302 – 0.595 |
-| F1 | 0.606 | **0.467** | 0.328 – 0.593 |
-| Accuracy | 0.794 | **0.837** | 0.792 – 0.881 |
-| Brier score | 0.439 | **0.101** | 0.075 – 0.126 |
+| ROC-AUC | 0.964 | **0.795** | 0.713 – 0.873 |
+| PR-AUC | 0.840 | **0.551** | 0.412 – 0.691 |
+| Precision | 0.438 | **0.488** | 0.333 – 0.639 |
+| Recall | 0.983 | **0.425** | 0.283 – 0.568 |
+| F1 | 0.606 | **0.455** | 0.312 – 0.575 |
+| Accuracy | 0.794 | **0.837** | 0.796 – 0.878 |
+| Brier score | 0.439 | **0.103** | 0.077 – 0.129 |
 
-On the test set the honest model flags 43 of 294 employees and catches 21 of the 47 who left.
+On the test set the honest model flags 41 of 294 employees and catches 20 of the 47 who left.
 The intervals are wide because only 47 test employees left.
 
 ### What was wrong with the original
@@ -70,13 +71,13 @@ The original notebook never printed any metrics. The "before" column re-runs its
 Re-running it with today's library versions gives employee 1004 a score of 0.84; the notebook
 printed 0.89. The gap comes from library version changes and does not change the conclusions.
 
-## Fairness check (out-of-fold scores, threshold 0.282)
+## Fairness check (out-of-fold scores, threshold 0.224)
 
 | Group | n | Recall (leavers caught) |
 |---|---|---|
-| Female / Male | 588 / 882 | 0.62 / 0.45 |
-| Age < 30 / 30–39 / 40–49 / 50+ | 326 / 622 / 349 / 173 | 0.63 / 0.51 / 0.38 / 0.30 |
-| Single / Married / Divorced | 470 / 673 / 327 | 0.62 / 0.37 / 0.52 |
+| Female / Male | 588 / 882 | 0.67 / 0.48 |
+| Age < 30 / 30–39 / 40–49 / 50+ | 326 / 622 / 349 / 173 | 0.67 / 0.56 / 0.35 / 0.30 |
+| Single / Married / Divorced | 470 / 673 / 327 | 0.64 / 0.42 / 0.55 |
 
 The model catches leavers unevenly. It finds younger and single employees who leave more often
 than older or married ones, even though it never sees age or marital status. Other features act

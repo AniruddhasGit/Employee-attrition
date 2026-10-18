@@ -18,7 +18,8 @@ test("before/after story moves from the leaky numbers to the honest ones", async
     const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;
     window.scrollTo(0, el.offsetTop + el.offsetHeight - window.innerHeight);
   });
-  await expect(story).toContainText("0.790");
+  const after = (await (await page.request.get("http://localhost:8010/api/model/metrics")).json()).after.roc_auc;
+  await expect(story).toContainText(after.toFixed(3));
   await expect(story).toContainText(/zeroed/i);
 });
 

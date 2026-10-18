@@ -45,3 +45,9 @@ def test_before_reproduces_original_single_row_scoring():
 
     scores = before_scores(load_raw())
     assert abs(scores.loc[1004] - 0.8925) < 0.06  # library versions drift (xgboost 3.x)
+
+
+def test_no_false_certainty(artifacts):
+    # Isotonic calibration pinned some people at exactly 100%; displayed scores must never claim that.
+    oof = artifacts["oof"]
+    assert oof["risk_score"].max() < 0.95 and oof["risk_score"].min() > 0.0

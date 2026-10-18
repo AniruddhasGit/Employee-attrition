@@ -32,5 +32,9 @@ def build_core() -> Pipeline:
 
 
 def build_pipeline() -> CalibratedClassifierCV:
-    """SMOTE skews probabilities upward; isotonic calibration maps them back to real rates."""
-    return CalibratedClassifierCV(build_core(), method="isotonic", cv=3)
+    """SMOTE skews probabilities upward; calibration maps them back to real rates.
+
+    Sigmoid (Platt) rather than isotonic: on 1,470 rows isotonic steps pinned some people at
+    exactly 100%, a certainty the model does not have. Held-out metrics are equivalent.
+    """
+    return CalibratedClassifierCV(build_core(), method="sigmoid", cv=3)

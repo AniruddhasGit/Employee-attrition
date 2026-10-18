@@ -84,7 +84,7 @@ slider, and is offered: open the app, read the code (GitHub link), or send a mes
 - Threshold chosen on validation data (CV out-of-fold), maximising F1 by default; stored in
   artifact metadata.
 - **Probability calibration** (builder's call): SMOTE inflates P(leave), and the cost lens sums
-  probabilities, so wrap the pipeline in `CalibratedClassifierCV` (isotonic, falls back to
+  probabilities, so wrap the pipeline in `CalibratedClassifierCV` (sigmoid; isotonic was tried and rejected because it pinned people at 100%; originally: isotonic, falls back to
   sigmoid if folds are too small). The before/after story includes the calibration step.
 - **Out-of-fold predictions** for every employee (5-fold stratified CV) are what the site
   displays, so no displayed score is in-sample.
