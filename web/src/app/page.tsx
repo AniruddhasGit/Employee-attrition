@@ -1,3 +1,13 @@
+import { About } from "@/components/landing/About";
+import { BeforeAfter } from "@/components/landing/BeforeAfter";
+import { Hero } from "@/components/landing/Hero";
+
 export default function Home() {
-  return <div className="min-h-[100dvh]" />;
+  return (
+    <>
+      <Hero />
+      <About />
+      <BeforeAfter />
+    </>
+  );
 }

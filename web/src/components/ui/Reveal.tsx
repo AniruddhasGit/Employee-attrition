@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
+import { EASE_OUT } from "@/lib/motion";
 
 /** Fades and rises into view once. Reduced motion: opacity only. */
 export function Reveal({
@@ -22,10 +23,10 @@ export function Reveal({
   return (
     <Comp
       className={className}
-      initial={{ opacity: 0, y: reduce ? 0 : y }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, transform: `translateY(${reduce ? 0 : y}px)` }}
+      whileInView={{ opacity: 1, transform: "translateY(0px)" }}
       viewport={{ once: true, amount: 0.25 }}
-      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.7, delay, ease: EASE_OUT }}
     >
       {children}
     </Comp>
