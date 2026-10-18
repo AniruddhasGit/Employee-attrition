@@ -4,7 +4,7 @@ import { ArrowCounterClockwiseIcon, CheckIcon, LinkSimpleIcon } from "@phosphor-
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ApiError, getEmployee, getMetrics, saveScenario, simulate, type Levers, type SimulateResult } from "@/lib/api";
+import { getEmployee, getMetrics, saveScenario, simulate, type Levers, type SimulateResult } from "@/lib/api";
 import { int, pct, signedPct } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
@@ -96,12 +96,14 @@ function Workbench({ detail, threshold }: Loaded) {
           <div className="rounded-2xl border border-line bg-surface p-6 md:p-8">
             <div className="flex flex-wrap items-end justify-between gap-6">
               <div>
-                <p className="text-sm text-muted">{changed ? "With your changes" : "Risk score"}</p>
+                <p className="text-sm text-muted">
+                  {failed ? "Out of date: couldn't update" : changed ? "With your changes" : "Risk score"}
+                </p>
                 <AnimatedNumber
                   testId="sim-after"
                   value={after}
                   format={(v) => pct(v)}
-                  className="text-[clamp(4rem,9vw,7rem)] font-semibold leading-none tracking-[-0.045em]"
+                  className={`text-[clamp(4rem,9vw,7rem)] font-semibold leading-none tracking-[-0.045em] transition-opacity duration-200 ${failed ? "opacity-35" : ""}`}
                 />
                 <p className="mt-2 text-sm text-muted">
                   Recorded score <span data-testid="sim-before" className="tabular text-ink">{pct(detail.riskScore)}</span>
@@ -182,7 +184,7 @@ export function Simulator() {
   if (error) {
     return (
       <div className="mx-auto max-w-[1400px] px-4 pb-24 pt-32 md:px-8">
-        <ErrorState message={error instanceof ApiError ? error.message : undefined} onRetry={retry} />
+        <ErrorState message={error.message} status={error.status} onRetry={retry} />
       </div>
     );
   }

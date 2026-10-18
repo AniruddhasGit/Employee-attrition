@@ -39,7 +39,7 @@ export function WorkforceView() {
       <h1 className="text-[clamp(2.5rem,6vw,5.5rem)] font-semibold leading-[0.95] tracking-[-0.045em]">
         The whole workforce.
       </h1>
-      {error && <div className="mt-10"><ErrorState message={error.message} onRetry={retry} /></div>}
+      {error && <div className="mt-10"><ErrorState message={error.message} status={error.status} onRetry={retry} /></div>}
       {!data && !error && <Skeleton className="mt-10 h-[60vh]" />}
       {data && (
         <>

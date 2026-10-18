@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from api.models import Employee, ModelRun
@@ -37,22 +38,31 @@ def run(session: Session, models_dir: Path, force: bool = False) -> int:
     drivers = pd.read_parquet(models_dir / "drivers.parquet")
     df = df.merge(oof, on="EmployeeID").merge(drivers, on="EmployeeID")
 
-    for r in df.to_dict("records"):
-        session.merge(Employee(
-            employee_id=int(r["EmployeeID"]),
-            department=r["Department"],
-            job_role=r["JobRole"],
-            job_level=int(r["JobLevel"]),
-            years_at_company=int(r["YearsAtCompany"]),
-            monthly_income=int(r["MonthlyIncome"]),
-            overtime=r["OverTime"],
-            features={f: _native(r[f]) for f in FEATURES},
-            risk_score=float(r["risk_score"]),
-            risk_band=svc.band(float(r["risk_score"])),
-            drivers=json.loads(r["drivers"]),
-            attrition=int(r["Attrition"]),
-            fold=int(r["fold"]),
-        ))
+    rows = [
+        {
+            "employee_id": int(r["EmployeeID"]),
+            "department": r["Department"],
+            "job_role": r["JobRole"],
+            "job_level": int(r["JobLevel"]),
+            "years_at_company": int(r["YearsAtCompany"]),
+            "monthly_income": int(r["MonthlyIncome"]),
+            "overtime": r["OverTime"],
+            "features": {f: _native(r[f]) for f in FEATURES},
+            "risk_score": float(r["risk_score"]),
+            "risk_band": svc.band(float(r["risk_score"])),
+            "drivers": json.loads(r["drivers"]),
+            "attrition": int(r["Attrition"]),
+            "fold": int(r["fold"]),
+        }
+        for r in df.to_dict("records")
+    ]
+    # One round trip instead of 1,470: matters against a hosted database on cold starts.
+    stmt = insert(Employee).values(rows)
+    stmt = stmt.on_conflict_do_update(
+        index_elements=[Employee.employee_id],
+        set_={c: stmt.excluded[c] for c in rows[0] if c != "employee_id"},
+    )
+    session.execute(stmt)
 
     run_row = session.query(ModelRun).filter_by(version=svc.metrics["version"]).one_or_none()
     if run_row is None:

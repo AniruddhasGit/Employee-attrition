@@ -70,7 +70,11 @@ cd web && npm ci && npm run dev   # Next.js on http://localhost:3000
 ```
 
 Tests: `make test` (Python), `cd web && npm test` (unit) and `npx playwright test` (end to end;
-starts the API and site if they are not running).
+starts the API and site if they are not running). A production web build needs
+`NEXT_PUBLIC_API_URL` set; it fails loudly without it.
+
+CI lives in `ci/github-ci.yml`. To switch it on: `gh auth refresh -s workflow`, then move it to
+`.github/workflows/ci.yml`.
 
 ## Model only
 
@@ -104,9 +108,10 @@ flowchart LR
   predictions, and the simulator re-scores a person with the fold model that never saw them.
 - **Calibrated.** SMOTE inflates probabilities, so the pipeline is wrapped in sigmoid calibration.
 - **Explained.** SHAP values are grouped back to the original columns and written in plain English.
-- **Free to host.** The API stays under 300 MB of memory with every model loaded. `DATABASE_URL` is
-  the only database setting, so a free managed Postgres (Neon, Supabase, AWS free tier) needs no
-  code changes.
+- **Free to host.** The API used about 260 MB of memory in Docker after serving the full test suite.
+  `DATABASE_URL` is the only database setting and accepts the `postgres://` URLs hosts hand out,
+  so a free managed Postgres (Neon, Supabase, AWS free tier) needs no code changes. The seed skips
+  when the database is already current and otherwise writes all rows in one statement.
 
 ## Repository layout
 

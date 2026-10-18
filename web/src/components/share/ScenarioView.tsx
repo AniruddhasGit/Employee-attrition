@@ -35,7 +35,7 @@ export function ScenarioView() {
       </div>
     );
   }
-  if (error) return <div className={wrap}><ErrorState message={error.message} onRetry={retry} /></div>;
+  if (error) return <div className={wrap}><ErrorState message={error.message} status={error.status} onRetry={retry} /></div>;
   if (!s) return <div className={wrap}><Skeleton className="h-96" /></div>;
 
   const changes = Object.entries(s.levers) as [keyof Levers, never][];

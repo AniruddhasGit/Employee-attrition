@@ -75,12 +75,12 @@ function Demo({ detail, threshold }: { detail: EmployeeDetail; threshold: number
 
       <div className="mt-8 flex items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-muted">Risk score</p>
+          <p className="text-sm text-muted">{failed ? "Out of date: couldn't update" : "Risk score"}</p>
           <AnimatedNumber
             testId="demo-risk"
             value={score}
             format={(v) => pct(v)}
-            className="text-[clamp(3.5rem,8vw,6rem)] font-semibold leading-none tracking-[-0.04em]"
+            className={`text-[clamp(3.5rem,8vw,6rem)] font-semibold leading-none tracking-[-0.04em] transition-opacity duration-200 ${failed ? "opacity-35" : ""}`}
           />
         </div>
         <div className="pb-2 text-right">
@@ -158,7 +158,7 @@ export function LiveDemo() {
         </div>
         <div className="col-span-12 md:col-span-7">
           {data && <Demo detail={data.detail} threshold={data.threshold} />}
-          {error && <ErrorState message={error.message} onRetry={retry} />}
+          {error && <ErrorState message={error.message} status={error.status} onRetry={retry} />}
           {!data && !error && <Skeleton className="h-[520px]" />}
         </div>
       </div>

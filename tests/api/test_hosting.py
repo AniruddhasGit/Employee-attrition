@@ -8,12 +8,36 @@ def test_plain_postgres_url_uses_psycopg_driver():
     assert Settings(database_url="postgres://u:p@h/db").database_url.startswith("postgresql+psycopg://")
 
 
+def test_cors_origins_accept_comma_separated_and_strip_slashes():
+    s = Settings(cors_origins="https://retain-web.onrender.com/, http://localhost:3000")
+    assert s.cors_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]
+    assert Settings(cors_origins='["https://a.example"]').cors_origins == ["https://a.example"]
+
+
 class _Req:
     def __init__(self, headers, host="10.0.0.1"):
         self.headers = headers
         self.client = type("C", (), {"host": host})()
 
 
-def test_client_ip_prefers_forwarded_for_behind_proxy():
-    assert client_ip(_Req({"x-forwarded-for": "203.0.113.7, 10.0.0.2"})) == "203.0.113.7"
+def test_client_ip_trusts_edge_header_then_rightmost_forwarded_hop():
+    edge = _Req({"cf-connecting-ip": "198.51.100.9", "x-forwarded-for": "1.1.1.1"})
+    assert client_ip(edge) == "198.51.100.9"
+    # A client can prepend fake hops; the proxy appends the real one on the right.
+    assert client_ip(_Req({"x-forwarded-for": "6.6.6.6, 203.0.113.7"})) == "203.0.113.7"
     assert client_ip(_Req({})) == "10.0.0.1"
+
+
+def test_scenario_saves_are_rate_limited(client, seeded):
+    from api import ratelimit
+
+    ratelimit.reset()
+    codes = [client.post("/api/scenarios", json={"employeeId": 1004, "levers": {}}).status_code
+             for _ in range(31)]
+    assert codes[:30] == [201] * 30 and codes[30] == 429
+    ratelimit.reset()
+
+
+def test_cors_origins_from_env_comma_separated(monkeypatch):
+    monkeypatch.setenv("CORS_ORIGINS", "https://retain-web.onrender.com/,http://localhost:3000")
+    assert Settings().cors_origins == ["https://retain-web.onrender.com", "http://localhost:3000"]

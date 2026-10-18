@@ -113,7 +113,7 @@ export function Explorer() {
 
       {error && !items.length && (
         <div className="mt-6">
-          <ErrorState message={error.message} onRetry={retry} />
+          <ErrorState message={error.message} status={error.status} onRetry={retry} />
         </div>
       )}
 

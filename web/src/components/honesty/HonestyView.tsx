@@ -41,7 +41,7 @@ export function HonestyView() {
         Every number on this page was measured on {m ? m.nTest : "294"} people the model never saw
         during training.
       </p>
-      {error && <div className="mt-10"><ErrorState message={error.message} onRetry={retry} /></div>}
+      {error && <div className="mt-10"><ErrorState message={error.message} status={error.status} onRetry={retry} /></div>}
       {!m && !error && <Skeleton className="mt-10 h-[60vh]" />}
       {m && (
         <div className="mt-16">

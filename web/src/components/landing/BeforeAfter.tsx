@@ -163,7 +163,7 @@ export function BeforeAfter() {
       {error && (
         <div className="mx-auto max-w-[1400px] px-4 py-24 md:px-8">
           <h2 id="before-after-title" className="mb-6 text-3xl font-semibold">It looked perfect. It wasn&apos;t.</h2>
-          <ErrorState message={error.message} onRetry={retry} />
+          <ErrorState message={error.message} status={error.status} onRetry={retry} />
         </div>
       )}
       {data && (reduce ? <StaticStory m={data} /> : <Story m={data} />)}

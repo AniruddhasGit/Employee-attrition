@@ -83,7 +83,7 @@ export function SegmentCompare() {
               swatch={side === "A" ? "var(--series-1)" : "var(--series-3)"}
             />
           ) : error ? (
-            <ErrorState message={error.message} onRetry={retry} />
+            <ErrorState message={error.message} status={error.status} onRetry={retry} />
           ) : (
             <Skeleton className="h-56" />
           )}

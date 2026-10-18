@@ -15,4 +15,4 @@ COPY api ./api
 RUN useradd --create-home retain && chown -R retain /app
 USER retain
 EXPOSE 8010
-CMD ["sh", "-c", "python -m alembic -c api/alembic.ini upgrade head && python -m api.seed && uvicorn api.main:app --host 0.0.0.0 --port 8010"]
+CMD ["sh", "-c", "python -m alembic -c api/alembic.ini upgrade head && python -m api.seed && uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8010}"]

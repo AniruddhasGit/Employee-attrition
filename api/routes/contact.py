@@ -26,12 +26,18 @@ class ContactIn(CamelModel):
             raise ValueError("Consent is required to send a message")
 
 
-def client_ip(request: Request) -> str:
-    """Real client IP. Behind a host's proxy (Render) every request comes from the proxy, so read
-    the first X-Forwarded-For hop; otherwise all visitors would share one rate limit."""
-    forwarded = request.headers.get("x-forwarded-for", "")
-    if forwarded.strip():
-        return forwarded.split(",")[0].strip()
+def client_ip(request) -> str:
+    """Real client IP behind a host's proxy (Render sits behind Cloudflare).
+
+    Edge-set headers come first because clients cannot forge them through the proxy. Failing that,
+    use the rightmost X-Forwarded-For hop: proxies append on the right, clients can only prepend.
+    """
+    for header in ("cf-connecting-ip", "true-client-ip"):
+        if request.headers.get(header):
+            return request.headers[header].strip()
+    hops = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",") if h.strip()]
+    if hops:
+        return hops[-1]
     return request.client.host if request.client else "unknown"
 
 

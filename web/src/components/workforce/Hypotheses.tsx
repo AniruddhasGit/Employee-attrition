@@ -14,7 +14,7 @@ export function Hypotheses() {
   const [open, setOpen] = useState<string | null>("OverTime");
   const reduce = useReducedMotion();
 
-  if (error) return <ErrorState message={error.message} onRetry={retry} />;
+  if (error) return <ErrorState message={error.message} status={error.status} onRetry={retry} />;
   if (!data) return <Skeleton className="h-80" />;
 
   return (

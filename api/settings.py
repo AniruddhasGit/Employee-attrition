@@ -1,8 +1,10 @@
+import json
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -12,8 +14,16 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://retain:retain@localhost:5433/retain"
     ip_hash_salt: str = "dev-only-salt"
-    cors_origins: list[str] = ["http://localhost:3000"]
+    cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:3000"]
     models_dir: Path = ROOT / "models"
+
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def _split_origins(cls, value):
+        """Accept a JSON list or a comma-separated string; trailing slashes never match Origin."""
+        if isinstance(value, str):
+            value = json.loads(value) if value.strip().startswith("[") else value.split(",")
+        return [v.strip().rstrip("/") for v in value if v.strip()]
 
     @field_validator("database_url")
     @classmethod

@@ -145,7 +145,7 @@ export function QuestionsCarousel() {
       </Reveal>
       <div className="mt-12">
         {data && <Track cards={data} />}
-        {error && <ErrorState message={error.message} onRetry={retry} />}
+        {error && <ErrorState message={error.message} status={error.status} onRetry={retry} />}
         {!data && !error && <Skeleton className="h-[340px]" />}
       </div>
     </section>

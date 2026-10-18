@@ -1,15 +1,19 @@
 import secrets
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from sqlalchemy import select
 
+from api import ratelimit
 from api.db import SessionDep
 from api.models import Scenario
+from api.routes.contact import client_ip, ip_hash
 from api.routes.employees import get_employee, to_card
 from api.schemas import CamelModel, EmployeeCard, Levers
 from api.service import get_service
 
 router = APIRouter(prefix="/api")
+
+SAVES_PER_HOUR = 30  # keeps a free 0.5 GB database from being filled by one client
 
 
 class ScenarioIn(CamelModel):
@@ -28,7 +32,9 @@ class ScenarioOut(CamelModel):
 
 
 @router.post("/scenarios", status_code=201)
-def save_scenario(body: ScenarioIn, session: SessionDep) -> dict:
+def save_scenario(body: ScenarioIn, request: Request, session: SessionDep) -> dict:
+    if not ratelimit.allow(f"scenario:{ip_hash(client_ip(request))}", SAVES_PER_HOUR, 3600):
+        raise HTTPException(429, "Too many saved scenarios. Please try again later.")
     e = get_employee(session, body.employee_id)
     overrides = body.levers.to_features()
     after = get_service().score_row(e.features, e.fold, overrides)[0] if overrides else e.risk_score
