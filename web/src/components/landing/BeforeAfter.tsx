@@ -50,8 +50,8 @@ function BugItem({ bug, i, progress }: { bug: (typeof BUGS)[number]; i: number; 
 /** Where the story is: a dot travelling from the original notebook to the honest model. */
 function StateRail({ t }: { t: MotionValue<number> }) {
   const transform = useTransform(t, (v) => `translateX(${v * 100}%)`);
-  const beforeOpacity = useTransform(t, [0, 0.5], [1, 0.45]);
-  const afterOpacity = useTransform(t, [0.5, 1], [0.45, 1]);
+  const beforeOpacity = useTransform(t, [0, 0.5], [1, 0.7]);
+  const afterOpacity = useTransform(t, [0.5, 1], [0.7, 1]);
   return (
     <div className="mt-8 max-w-sm" aria-hidden>
       <div className="relative h-px bg-line">

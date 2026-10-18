@@ -12,14 +12,18 @@ test("hero shows headline, feature index and primary CTA", async ({ page }) => {
 test("before/after story moves from the leaky numbers to the honest ones", async ({ page }) => {
   await page.goto("/");
   const story = page.getByTestId("before-after");
-  await story.scrollIntoViewIfNeeded();
-  await expect(story).toContainText("0.964");
+  // Section top at the viewport top = start of the scroll story (progress 0).
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;
+    window.scrollTo(0, el.offsetTop);
+  });
+  const m = await (await page.request.get("http://localhost:8010/api/model/metrics")).json();
+  await expect(story).toContainText(m.before.roc_auc.toFixed(3));
   await page.evaluate(() => {
     const el = document.querySelector('[data-testid="before-after"]') as HTMLElement;
     window.scrollTo(0, el.offsetTop + el.offsetHeight - window.innerHeight);
   });
-  const after = (await (await page.request.get("http://localhost:8010/api/model/metrics")).json()).after.roc_auc;
-  await expect(story).toContainText(after.toFixed(3));
+  await expect(story).toContainText(m.after.roc_auc.toFixed(3));
   await expect(story).toContainText(/zeroed/i);
 });
 

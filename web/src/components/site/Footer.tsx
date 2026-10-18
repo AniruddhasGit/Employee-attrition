@@ -40,10 +40,9 @@ export function Footer() {
             ))}
           </ul>
 
-          <a href={SITE.email} className="mt-10 block" aria-label="Get in touch">
+          <a href={SITE.email} className="mt-10 block">
             {/* The visible parent is observed; words start clipped below their masks. */}
             <motion.span
-              aria-hidden
               initial="hidden"
               whileInView="shown"
               viewport={{ once: true, amount: 0.4 }}
@@ -61,6 +60,8 @@ export function Footer() {
                   >
                     {w}
                   </motion.span>
+                  {/* Real spaces keep the link's accessible name "Get in touch", not "Getintouch". */}
+                  {i < words.length - 1 && <span className="sr-only"> </span>}
                 </span>
               ))}
             </motion.span>

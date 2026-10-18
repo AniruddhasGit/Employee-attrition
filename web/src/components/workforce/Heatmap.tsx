@@ -57,7 +57,7 @@ export function Heatmap({ cells }: { cells: Cell[] }) {
                       <span className="text-sm leading-tight">{c.jobRole}</span>
                       <span className="flex items-baseline justify-between gap-2">
                         <span className="tabular text-xl font-semibold">{pct(c.meanRisk)}</span>
-                        <span className="tabular text-xs opacity-80">n {c.n}</span>
+                        <span className="tabular text-xs">n {c.n}</span>
                       </span>
                     </motion.li>
                   );

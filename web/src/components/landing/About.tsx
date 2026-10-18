@@ -17,7 +17,8 @@ const TAGS = [
 ];
 
 function Word({ word, range, progress }: { word: string; range: [number, number]; progress: MotionValue<number> }) {
-  const opacity = useTransform(progress, range, [0.16, 1]);
+  // Floor of 0.45 keeps unrevealed words at WCAG AA large-text contrast in both themes.
+  const opacity = useTransform(progress, range, [0.45, 1]);
   return (
     <motion.span style={{ opacity }} className="inline-block whitespace-pre">
       {word}{" "}

@@ -3,7 +3,27 @@
 **An honest look at predicting employee attrition.** It starts from a flawed analysis, shows
 what was wrong with it, fixes it, and is clear about what the fixed model can and can't tell you.
 
-> Screenshot: coming with the web app (Phase B).
+![Retain landing page](docs/screenshots/home-1440.png)
+
+## The app
+
+A local web app built on the honest model. Every score it shows comes from a model that never saw
+that person.
+
+| | |
+|---|---|
+| ![What-if simulator](docs/screenshots/simulator-1440.png) | ![Before and after story](docs/screenshots/story-1440.png) |
+| ![Workforce heatmap](docs/screenshots/workforce-1440.png) | ![Threshold explorer](docs/screenshots/honesty-1440.png) |
+
+- **Before / after story:** scroll through the original notebook's numbers turning into the honest ones, with the four bugs that explain the gap.
+- **Explorer and what-if simulator:** open any of the 1,470 fictional employees, see their risk score and its drivers in plain English, change what an employer could change (overtime, pay, stock options, level, training, travel, promotion timing) and save a shareable link.
+- **Workforce map:** risk by department and role, the spread of scores, the factors that raise risk most often, and a side-by-side comparison of any two groups.
+- **Cost estimate:** expected attrition cost under a replacement-cost assumption you control.
+- **Ideas worth testing:** retention hypotheses tied to each factor, framed as experiments, not answers.
+- **How good is this, honestly?:** metrics with 95% ranges, a threshold explorer with a live confusion matrix, a calibration plot and a fairness check.
+- **Contact form:** stored in Postgres, with a honeypot and rate limiting.
+
+Gender, age and marital status are never model inputs. They appear only in the fairness check.
 
 ## Before → after
 
@@ -12,22 +32,47 @@ Its evaluation cell was commented out. Re-running its own predictor on all 1,470
 shows two problems:
 - It was graded on rows it had trained on, so its ranking looks far better than it is.
 - Its single-employee encoding silently zeroed every categorical input (overtime, job role, …),
-  so at its 0.9 cut-off it flagged **532 of 1,470 employees (36%)** as leavers.
+  so at its 0.9 cut-off it flagged **569 of 1,470 employees (39%)** as leavers.
 
-| Metric | Before: original predictor, in-sample, cut-off 0.9 | After: held-out, 294 employees, cut-off 0.224 | 95% CI (after) |
+| Metric | Before: original predictor, in-sample, cut-off 0.9 | After: held-out, 294 employees, cut-off 0.175 | 95% CI (after) |
 |---|---|---|---|
-| ROC-AUC | 0.964 | **0.795** | 0.713 – 0.873 |
-| PR-AUC | 0.840 | **0.551** | 0.412 – 0.691 |
-| Precision | 0.438 | **0.488** | 0.333 – 0.639 |
-| Recall | 0.983 | **0.425** | 0.283 – 0.568 |
-| Brier score (lower is better) | 0.439 | **0.103** | 0.077 – 0.129 |
+| ROC-AUC | 0.962 | **0.791** | 0.708 – 0.869 |
+| PR-AUC | 0.832 | **0.545** | 0.409 – 0.685 |
+| Precision | 0.410 | **0.439** | 0.314 – 0.563 |
+| Recall | 0.983 | **0.532** | 0.385 – 0.684 |
+| Brier score (lower is better) | 0.459 | **0.103** | 0.077 – 0.130 |
 
 The two columns aren't measured the same way. The "before" column is what the old code would
 have claimed. The "after" column is what the model actually achieves on employees it has never seen.
 
 The full details (method, fairness check, limitations) are in [docs/MODEL_CARD.md](docs/MODEL_CARD.md).
 
-## Quickstart
+## Run the whole app (Docker)
+
+Requires Docker. This builds the model inside the image, starts PostgreSQL 18, the API and the site.
+
+```bash
+docker compose --profile app up --build
+```
+
+Then open http://localhost:3000. The API is at http://localhost:8010/docs.
+
+## Develop locally
+
+Requires Python 3.12, [uv](https://docs.astral.sh/uv/), Node 24 and Docker (for Postgres only).
+
+```bash
+cp .env.example .env
+make setup train          # Python env + model artifacts in models/
+make db-up migrate seed   # Postgres on port 5433, schema, 1,470 employees
+make api                  # FastAPI on http://localhost:8010
+cd web && npm ci && npm run dev   # Next.js on http://localhost:3000
+```
+
+Tests: `make test` (Python), `cd web && npm test` (unit) and `npx playwright test` (end to end;
+starts the API and site if they are not running).
+
+## Model only
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
@@ -45,27 +90,34 @@ On Windows without `make`, run the commands inside the Makefile directly, for ex
 
 ```mermaid
 flowchart LR
-    CSV[(IBM HR CSV<br/>1,470 fictional employees)] --> D[ml.data<br/>clean + EmployeeID]
-    D --> F[ml.features<br/>27 inputs, no gender/age/marital]
-    F --> S{80/20 stratified split}
-    S -->|train| P[encode → SMOTE → XGBoost<br/>+ sigmoid calibration]
-    P -->|5-fold OOF| T[threshold = max F1]
-    S -->|test, untouched| E[ml.evaluate<br/>metrics + bootstrap CIs]
-    T --> E
-    F --> O[5-fold OOF over everyone<br/>fold models + scores]
-    O --> X[ml.explain<br/>SHAP → plain English]
-    O --> R[ml.fairness<br/>audit by protected group]
-    E & O & X & R --> M[(models/<br/>metrics.json, oof, drivers)]
+    CSV[(IBM HR CSV<br/>1,470 fictional employees)] --> T[ml.train<br/>split, SMOTE, XGBoost,<br/>calibration, OOF scores]
+    T --> M[(models/<br/>metrics, scores,<br/>drivers, fold models)]
+    M --> S[api.seed]
+    S --> DB[(PostgreSQL 18)]
+    M --> API[FastAPI<br/>employees, simulate,<br/>workforce, scenarios, contact]
+    DB --> API
+    API --> WEB[Next.js site<br/>Motion, SVG charts]
 ```
+
+- **Honest scores.** An 80/20 stratified split gives a test set the model never sees. The
+  threshold is chosen on training data only. The scores shown in the app are 5-fold out-of-fold
+  predictions, and the simulator re-scores a person with the fold model that never saw them.
+- **Calibrated.** SMOTE inflates probabilities, so the pipeline is wrapped in sigmoid calibration.
+- **Explained.** SHAP values are grouped back to the original columns and written in plain English.
+- **Free to host.** The API stays under 300 MB of memory with every model loaded. `DATABASE_URL` is
+  the only database setting, so a free managed Postgres (Neon, Supabase, AWS free tier) needs no
+  code changes.
 
 ## Repository layout
 
 ```
 ml/          the modelling package (data, features, model, evaluate, explain, fairness, score, train)
-tests/       pytest suite, including a guard that no test row is ever trained on
+api/         FastAPI app, SQLAlchemy models, Alembic migrations, seed script, Dockerfile
+web/         Next.js site (App Router, Tailwind v4, Motion), Playwright and Vitest tests
+tests/       pytest suite for the model and the API, including a leakage guard
 notebooks/   original.ipynb (as it was) and attrition.ipynb (the clean walkthrough)
 data/raw/    the IBM dataset and a 20-row sample (copies of dataset rows, for format tests)
-docs/        model card, original report, design specs and plans
+docs/        model card, original report, screenshots, design specs and plans
 models/      generated by `make train` (gitignored)
 ```
 
