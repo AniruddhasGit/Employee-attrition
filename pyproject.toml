@@ -1,0 +1,16 @@
+[project]
+name = "retain"
+version = "0.1.0"
+description = "Honest employee-attrition model and the Retain web app"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["notebooks", ".superpowers"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

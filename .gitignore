@@ -28,3 +28,10 @@ Thumbs.db
 
 # third-party design reference (local only)
 docs/design/reference.png
+.superpowers/
+
+# ml artifacts & tool caches
+models/
+*.joblib
+.pytest_cache/
+.ruff_cache/
