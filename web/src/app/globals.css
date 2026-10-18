@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+/*
+  Retain design tokens.
+  Palette: cool slate / blue-grey neutrals, one accent ("signal", burnt orange) reserved for risk.
+  Shape rule: interactive elements are full pills, surfaces are 16px (rounded-2xl), inputs are underlines.
+  Z-index scale: nav 40, overlays 50, grain 60.
+*/
+:root {
+  --bg: #f1f3f5;
+  --surface: #fafbfc;
+  --ink: #0e1116;
+  --ink-soft: #2a323c;
+  --muted: #56616d;
+  --mist: #9aa8b5;
+  --haze: #c9d3dc;
+  --line: rgb(14 17 22 / 0.12);
+  --night: #1b2430;
+  --night-ink: #e9edf1;
+  --signal: #c84f25;
+  --signal-soft: #f3d9cf;
+  --calm: #4f6f8c;
+  --hero-a: #b9c5d0;
+  --hero-b: #8d9eae;
+  --hero-c: #dfe5ea;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1218;
+    --surface: #141b23;
+    --ink: #e8ecef;
+    --ink-soft: #c6ced6;
+    --muted: #97a4b1;
+    --mist: #6f7f8f;
+    --haze: #36424f;
+    --line: rgb(232 236 239 / 0.12);
+    --night: #070a0e;
+    --night-ink: #e8ecef;
+    --signal: #e8774c;
+    --signal-soft: #3b2219;
+    --calm: #8fb0cc;
+    --hero-a: #283442;
+    --hero-b: #3c4c5d;
+    --hero-c: #1a222c;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-mist: var(--mist);
+  --color-haze: var(--haze);
+  --color-line: var(--line);
+  --color-night: var(--night);
+  --color-night-ink: var(--night-ink);
+  --color-signal: var(--signal);
+  --color-signal-soft: var(--signal-soft);
+  --color-calm: var(--calm);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html {
+  color-scheme: light dark;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: var(--signal);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
