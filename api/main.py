@@ -6,7 +6,7 @@ from fastapi import Depends, FastAPI
 from sqlalchemy import text
 
 from api.auth import require_same_origin
-from api.db import SessionDep, SessionLocal
+from api.db import SessionLocal
 from api.settings import get_settings
 
 settings = get_settings()
@@ -30,11 +30,16 @@ app = FastAPI(title="Retain API", version="1.0.0", lifespan=lifespan,
 
 
 @app.get("/api/health")
-def health(session: SessionDep) -> dict:
-    db_ok = session.execute(text("SELECT 1")).scalar() == 1
+def health(deep: bool = False) -> dict:
+    """Liveness for the host's frequent probes: no database query, so the free Neon compute can
+    sleep. Pass ?deep=1 to also check the database."""
     metrics = settings.models_dir / "metrics.json"
     version = json.loads(metrics.read_text())["version"] if metrics.exists() else None
-    return {"status": "ok", "db": db_ok, "model_version": version}
+    out = {"status": "ok", "model_version": version}
+    if deep:
+        with SessionLocal() as session:
+            out["db"] = session.execute(text("SELECT 1")).scalar() == 1
+    return out
 
 
 from api.routes import auth, contact, hr, hr_people, me, public  # noqa: E402
