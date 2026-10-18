@@ -76,6 +76,20 @@ starts the API and site if they are not running). A production web build needs
 CI lives in `ci/github-ci.yml`. To switch it on: `gh auth refresh -s workflow`, then move it to
 `.github/workflows/ci.yml`.
 
+## Deploy for free (Render + Neon)
+
+1. Create a free Neon Postgres project and copy its connection string.
+2. Give Render access to this repository (make it public, or grant Render's GitHub app access).
+3. Run, with your own keys in the environment (never commit them):
+
+```bash
+RENDER_API_KEY=... DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require   python scripts/deploy_render.py
+```
+
+The script creates or updates `retain-api` and `retain-web` on Render's free plan, wires the
+API URL and CORS origin between them, waits until both are live and checks them. Free services
+sleep when idle, so the first request after a while can take up to a minute.
+
 ## Model only
 
 Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
