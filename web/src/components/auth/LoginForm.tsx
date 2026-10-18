@@ -232,7 +232,7 @@ export function LoginForm() {
         </form>
 
         <motion.p {...enter(5)} className="mt-14 text-xs text-mist">
-          All people and data here are fictional.
+          Built on the IBM HR Analytics dataset. Names are generated.
         </motion.p>
       </div>
     </div>
