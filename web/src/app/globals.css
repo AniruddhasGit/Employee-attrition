@@ -23,6 +23,19 @@
   --hero-a: #b9c5d0;
   --hero-b: #8d9eae;
   --hero-c: #dfe5ea;
+  /* Chart slots, validated with the dataviz validator (--pairs all) on --surface. */
+  --series-1: #356fb0;
+  --series-2: #c84f25;
+  --series-3: #1a9a6c;
+  /* One-hue sequential ramp (signal) for the risk heatmap, low to high. */
+  --seq-0: #f6d7c8;
+  --seq-1: #eeb196;
+  --seq-2: #e38a63;
+  --seq-3: #d16534;
+  --seq-4: #b44a1d;
+  --seq-5: #8c3713;
+  --seq-6: #63270d;
+  --seq-ink-hi: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -43,6 +56,17 @@
     --hero-a: #283442;
     --hero-b: #3c4c5d;
     --hero-c: #1a222c;
+    --series-1: #4f8ad0;
+    --series-2: #e06a3c;
+    --series-3: #22a877;
+    --seq-0: #2a1d19;
+    --seq-1: #4a2518;
+    --seq-2: #6f311b;
+    --seq-3: #994020;
+    --seq-4: #c25429;
+    --seq-5: #e0774a;
+    --seq-6: #f2a682;
+    --seq-ink-hi: #0d1218;
   }
 }
 
@@ -60,6 +84,9 @@
   --color-signal: var(--signal);
   --color-signal-soft: var(--signal-soft);
   --color-calm: var(--calm);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
