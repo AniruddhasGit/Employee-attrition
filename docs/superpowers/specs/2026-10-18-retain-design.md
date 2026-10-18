@@ -23,8 +23,8 @@ a GitHub portfolio piece and as a consultancy-style demo.
    of features that are each useful and understandable to a stranger.
 3. Lots of motion — but every major animation carries meaning (numbers, risk, story progress),
    plus decorative atmosphere in the hero.
-4. Local PostgreSQL now; configuration shaped so AWS (RDS + container hosting) later is a
-   config change, not a rewrite.
+4. Local PostgreSQL now; configuration shaped so free-tier hosting later (AWS free tier or
+   similar) is a config change, not a rewrite.
 
 ## Non-goals
 
@@ -42,6 +42,12 @@ a GitHub portfolio piece and as a consultancy-style demo.
 - Motion that hurts readability or ignores `prefers-reduced-motion`.
 
 ## Constraints
+
+- **Personal app that must run for free** (owner, 2026-10-18). No paid services, ever. Later
+  hosting must fit free tiers: e.g. web on Vercel/Netlify free, API on a free container host,
+  Postgres on a free managed Postgres (Neon/Supabase) or the AWS free tier — all reached through
+  the same `DATABASE_URL`. So: API process must stay under ~512 MB RAM, cold-start in under
+  ~30 s, no background workers or queues, model artifacts small enough to ship in the image.
 
 - Windows 11 dev machine; Node 24, Python 3.12, Docker 29 available. Native PostgreSQL 18 is
   installed but not on PATH.
