@@ -99,7 +99,10 @@ def get_ok(url: str) -> int:
 def main() -> None:
     if not KEY or not os.environ.get("DATABASE_URL"):
         sys.exit("Set RENDER_API_KEY and DATABASE_URL in the environment first.")
-    owner = call("GET", "/owners?limit=5")[1][0]["owner"]["id"]
+    status, owners = call("GET", "/owners?limit=5")
+    if status != 200 or not owners:
+        sys.exit(f"Render rejected the API key ({status}). Check RENDER_API_KEY.")
+    owner = owners[0]["owner"]["id"]
 
     api = find(API_NAME) or ensure(API_NAME, "./api/Dockerfile", ".", "/api/health", {
         "DATABASE_URL": os.environ["DATABASE_URL"],
