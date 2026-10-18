@@ -27,11 +27,11 @@ tenure and promotion history, training, work-life balance.
 
 1. A stratified 80/20 split creates a test set of 294 employees (47 leavers) that is never
    used for training or tuning.
-2. Pipeline: one-hot encoding → SMOTE (on training rows only) → XGBoost with the original
-   notebook's hyperparameters.
+2. Pipeline: one-hot encoding → SMOTE (on training rows only) → XGBoost with tuned
+   hyperparameters (see "Tuning" below).
 3. The pipeline is wrapped in sigmoid (Platt) calibration (3-fold), because SMOTE inflates
    probabilities. Isotonic calibration was tried first, but it pinned some people at exactly 100%.
-4. **Threshold = 0.175.** It is the cut-off that maximised F1 on 5-fold out-of-fold predictions
+4. **Threshold = 0.227.** It is the cut-off that maximised F1 on 5-fold out-of-fold predictions
    within the training set.
 5. Every risk score shown in the app is **out-of-fold**: 5-fold cross-validation over all 1,470
    employees, so each person is scored by a model that never saw them. The what-if simulator
@@ -39,17 +39,17 @@ tenure and promotion history, training, work-life balance.
 
 ## Results
 
-| Metric | Before: original predictor, in-sample, 1,470 rows, cut-off 0.9 | After: held-out, 294 rows, cut-off 0.175 | 95% CI (after) |
+| Metric | Before: original predictor, in-sample, 1,470 rows, cut-off 0.9 | After: held-out, 294 rows, cut-off 0.227 | 95% CI (after) |
 |---|---|---|---|
-| ROC-AUC | 0.962 | **0.791** | 0.708 – 0.869 |
-| PR-AUC | 0.832 | **0.545** | 0.409 – 0.685 |
-| Precision | 0.410 | **0.439** | 0.314 – 0.563 |
-| Recall | 0.983 | **0.532** | 0.385 – 0.684 |
-| F1 | 0.578 | **0.481** | 0.353 – 0.590 |
-| Accuracy | 0.769 | **0.816** | 0.772 – 0.857 |
-| Brier score | 0.459 | **0.103** | 0.077 – 0.130 |
+| ROC-AUC | 0.962 | **0.814** | 0.731 – 0.890 |
+| PR-AUC | 0.832 | **0.600** | 0.468 – 0.731 |
+| Precision | 0.409 | **0.491** | 0.365 – 0.617 |
+| Recall | 0.983 | **0.617** | 0.467 – 0.773 |
+| F1 | 0.578 | **0.547** | 0.425 – 0.655 |
+| Accuracy | 0.769 | **0.837** | 0.792 – 0.881 |
+| Brier score | 0.459 | **0.096** | 0.070 – 0.120 |
 
-On the test set the honest model flags 57 of 294 employees and catches 25 of the 47 who left.
+On the test set the honest model flags 59 of 294 employees and catches 29 of the 47 who left.
 The intervals are wide because only 47 test employees left.
 
 ### What was wrong with the original
@@ -75,17 +75,37 @@ printed 0.89. The gap comes from library and platform changes and does not chang
 
 The numbers above come from the canonical Linux run (CI, Docker and hosting all use Linux).
 Training on Windows with the same pinned versions gives slightly different floating-point results:
-ROC-AUC 0.795 instead of 0.791, and a max-F1 threshold of 0.224 instead of 0.175. The ranking
+ROC-AUC 0.810 instead of 0.814, and a max-F1 threshold of 0.248 instead of 0.227. The ranking
 metrics agree within noise. The threshold moving that much shows how flat the F1 curve is near
 its peak, so treat the exact cut-off as a choice, not a discovery.
 
-## Fairness check (out-of-fold scores, threshold 0.175)
+## Tuning
+
+The XGBoost hyperparameters come from a 50-draw randomized search with 5-fold cross-validation
+**inside the 80% training split only**. The test set was used once per finalist, never to tune.
+Nine alternatives were compared on the same split: SMOTE vs `scale_pos_weight`, tuned logistic
+regression, soft-voting ensembles, and six engineered ratio features.
+
+| Held-out (Windows run, same split) | Before tuning | Tuned | Paired bootstrap difference, 95% CI |
+|---|---|---|---|
+| ROC-AUC | 0.795 | 0.810 | +0.015 (−0.001 to +0.031) |
+| PR-AUC | 0.551 | 0.594 | +0.042 (+0.007 to +0.080) |
+| Brier score | 0.103 | 0.096 | −0.007 (−0.013 to −0.001) |
+| Calibration error (ECE) | 0.054 | 0.024 | |
+
+The gain is modest: PR-AUC and Brier improve beyond chance on paired resampling, while ROC-AUC
+and F1 stay within noise on 294 test rows. Choosing among ten candidates after seeing the test
+set inflates the apparent gain a little. Logistic regression and ensembles did no better on the
+test set and would lose the per-person SHAP explanations, and the engineered features helped
+cross-validation but not the test set, so neither was adopted.
+
+## Fairness check (out-of-fold scores, threshold 0.227)
 
 | Group | n | Recall (leavers caught) |
 |---|---|---|
-| Female / Male | 588 / 882 | 0.72 / 0.58 |
-| Age < 30 / 30–39 / 40–49 / 50+ | 326 / 622 / 349 / 173 | 0.75 / 0.65 / 0.47 / 0.35 |
-| Single / Married / Divorced | 470 / 673 / 327 | 0.71 / 0.54 / 0.61 |
+| Female / Male | 588 / 882 | 0.72 / 0.61 |
+| Age < 30 / 30–39 / 40–49 / 50+ | 326 / 622 / 349 / 173 | 0.80 / 0.62 / 0.53 / 0.35 |
+| Single / Married / Divorced | 470 / 673 / 327 | 0.78 / 0.48 / 0.61 |
 
 The model catches leavers unevenly. It finds younger and single employees who leave more often
 than older or married ones, even though it never sees age or marital status. Other features act

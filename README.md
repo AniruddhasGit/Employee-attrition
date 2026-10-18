@@ -49,13 +49,13 @@ shows two problems:
 - Its single-employee encoding silently zeroed every categorical input (overtime, job role, …),
   so at its 0.9 cut-off it flagged **569 of 1,470 employees (39%)** as leavers.
 
-| Metric | Before: original predictor, in-sample, cut-off 0.9 | After: held-out, 294 employees, cut-off 0.175 | 95% CI (after) |
+| Metric | Before: original predictor, in-sample, cut-off 0.9 | After: held-out, 294 employees, cut-off 0.227 | 95% CI (after) |
 |---|---|---|---|
-| ROC-AUC | 0.962 | **0.791** | 0.708 – 0.869 |
-| PR-AUC | 0.832 | **0.545** | 0.409 – 0.685 |
-| Precision | 0.410 | **0.439** | 0.314 – 0.563 |
-| Recall | 0.983 | **0.532** | 0.385 – 0.684 |
-| Brier score (lower is better) | 0.459 | **0.103** | 0.077 – 0.130 |
+| ROC-AUC | 0.962 | **0.814** | 0.731 – 0.890 |
+| PR-AUC | 0.832 | **0.600** | 0.468 – 0.731 |
+| Precision | 0.409 | **0.491** | 0.365 – 0.617 |
+| Recall | 0.983 | **0.617** | 0.467 – 0.773 |
+| Brier score (lower is better) | 0.459 | **0.096** | 0.070 – 0.120 |
 
 The two columns aren't measured the same way. The "before" column is what the old code would
 have claimed. The "after" column is what the model actually achieves on employees it has never seen.
