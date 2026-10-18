@@ -26,6 +26,15 @@ class ContactIn(CamelModel):
             raise ValueError("Consent is required to send a message")
 
 
+def client_ip(request: Request) -> str:
+    """Real client IP. Behind a host's proxy (Render) every request comes from the proxy, so read
+    the first X-Forwarded-For hop; otherwise all visitors would share one rate limit."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded.strip():
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 def ip_hash(ip: str) -> str:
     return hashlib.sha256((get_settings().ip_hash_salt + ip).encode()).hexdigest()
 
@@ -34,7 +43,7 @@ def ip_hash(ip: str) -> str:
 def contact(body: ContactIn, request: Request, session: SessionDep) -> dict:
     if body.website:
         return {"ok": True}  # quietly drop bots
-    key = ip_hash(request.client.host if request.client else "unknown")
+    key = ip_hash(client_ip(request))
     if not ratelimit.allow(f"contact:{key}", LIMIT_PER_HOUR, 3600):
         raise HTTPException(429, "Too many messages. Please try again later.")
     session.add(ContactMessage(name=body.name.strip(), email=str(body.email),
