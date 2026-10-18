@@ -3,7 +3,7 @@
 Usage (PowerShell or bash; secrets stay in your shell, never in the repo):
     RENDER_API_KEY=... DATABASE_URL=... python scripts/deploy_render.py
 
-Re-runnable: existing services are found by name and only their settings/env vars are updated.
+Re-runnable: existing services are found by name and only their env vars are updated.
 Requires Render to have access to the GitHub repo (public repo, or Render's GitHub app granted access).
 """
 
@@ -108,7 +108,8 @@ def main() -> None:
     }, owner)
     api_url = api["serviceDetails"]["url"]
 
-    web = ensure(WEB_NAME, "./web/Dockerfile", "./web", None, {"NEXT_PUBLIC_API_URL": api_url}, owner)
+    web_env = {"NEXT_PUBLIC_API_URL": api_url}
+    web = ensure(WEB_NAME, "./web/Dockerfile", "./web", None, web_env, owner)
     web_url = web["serviceDetails"]["url"]
 
     # Point CORS at the web service's real URL (Render may add a suffix if the name was taken).
