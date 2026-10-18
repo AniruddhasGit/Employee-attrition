@@ -26,3 +26,15 @@ def client():
         yield c
     with engine.begin() as conn:
         conn.execute(text("TRUNCATE scenarios, contact_messages RESTART IDENTITY CASCADE"))
+
+
+@pytest.fixture(scope="session")
+def seeded(_schema):
+    """Seed the test DB once from the real Phase A artifacts."""
+    from api.db import SessionLocal
+    from api.seed import run
+    from api.settings import get_settings
+
+    with SessionLocal() as s:
+        run(s, get_settings().models_dir)
+    return True

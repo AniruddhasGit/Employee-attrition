@@ -1,11 +1,10 @@
 import json
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
-from sqlalchemy.orm import Session
 
-from api.db import get_session
+from api.db import SessionDep
 from api.settings import get_settings
 
 settings = get_settings()
@@ -19,7 +18,7 @@ app.add_middleware(
 
 
 @app.get("/api/health")
-def health(session: Session = Depends(get_session)) -> dict:
+def health(session: SessionDep) -> dict:
     db_ok = session.execute(text("SELECT 1")).scalar() == 1
     metrics = settings.models_dir / "metrics.json"
     version = json.loads(metrics.read_text())["version"] if metrics.exists() else None
