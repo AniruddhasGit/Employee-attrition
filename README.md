@@ -13,12 +13,24 @@ never saw that person.
 
 - **Landing page:** the before/after story of the model, how the check-in loop works, and a
   sign-in call to action. It shows only aggregate numbers.
-- **Sign-in:** email and password, with one-click demo accounts. No data page is public.
+- **Sign-in:** email and password. No data page is public. If the free server is asleep, the
+  sign-in waits for it and retries on its own.
 - **HR area:** a dashboard of the open quarter (who has answered, risk by team, "Sharp drops since
   last check-in", "What would keep people here"), the people list, each person's drivers in plain
   English, a what-if panel for the things an employer can change (overtime, pay, stock options,
   level, training, travel, promotion timing), and action plans that re-score the person when
   they are finished.
+- **Adding people:** HR creates a person with a work email and a temporary password. The person is
+  scored straight away from colleagues in the same role, and must choose their own password the
+  first time they sign in.
+- **Custom questions:** HR can add multiple-choice questions to the check-in, or remove them.
+  Employees answer new questions at their next check-in. Once 75% of current staff have answered,
+  **Recompute probabilities** becomes available. Because nobody who answered a brand-new question
+  has had time to leave, the recompute learns from the stay-intent question every check-in asks
+  ("A year from now, do you see yourself still working here?"). It fits how each answer shifts
+  that intent beyond what the base model predicts (L2-penalised logistic regression with the base
+  log-odds as an input). It then re-scores everyone and keeps the company-wide average where the
+  base model puts it. The page reports held-out AUC for stay intent, with and without the questions.
 - **Employee area:** the quarterly check-in, "What would keep you here", and what HR is doing
   about it. Employees never see a score.
 

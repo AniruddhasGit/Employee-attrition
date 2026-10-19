@@ -1,6 +1,8 @@
 "use client";
 
+import { UserPlusIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
+import Link from "next/link";
 import { useState } from "react";
 import { getDashboard, type Dashboard as Data } from "@/lib/api";
 import { int, pct } from "@/lib/format";
@@ -138,7 +140,22 @@ function Loaded({ d }: { d: Data }) {
           <SharpDrops drops={d.sharpDrops} previousQuarter={d.previousQuarter} />
         </Section>
 
-        <Section id="people" n="02" kicker="Everyone" title="People at risk" intro="Everyone, riskiest first. Open a person to see why, and what might help.">
+        <Section
+          id="people"
+          n="02"
+          kicker="Everyone"
+          title="People at risk"
+          intro="Everyone, riskiest first. Open a person to see why, and what might help."
+          aside={
+            <Link
+              href="/hr/people/new"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-bg transition-transform duration-150 ease-out active:scale-[0.97]"
+            >
+              <UserPlusIcon size={16} aria-hidden />
+              Add person
+            </Link>
+          }
+        >
           <PeopleTable departments={departments} />
         </Section>
 

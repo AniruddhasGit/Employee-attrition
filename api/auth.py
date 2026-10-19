@@ -35,7 +35,7 @@ def verify_password(password_hash: str | None, password: str) -> bool:
         return False
 
 
-def _digest(raw: str) -> str:
+def digest(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
@@ -43,14 +43,14 @@ def open_session(db, user: User) -> str:
     """Start a session; returns the raw token for the cookie (only its hash is stored)."""
     raw = secrets.token_urlsafe(32)
     ttl = timedelta(hours=get_settings().session_ttl_hours)
-    db.add(UserSession(token_hash=_digest(raw), user_id=user.id,
+    db.add(UserSession(token_hash=digest(raw), user_id=user.id,
                        expires_at=datetime.now(UTC) + ttl))
     db.commit()
     return raw
 
 
 def close_session(db, raw: str) -> None:
-    db.execute(delete(UserSession).where(UserSession.token_hash == _digest(raw)))
+    db.execute(delete(UserSession).where(UserSession.token_hash == digest(raw)))
     db.commit()
 
 
@@ -58,7 +58,7 @@ def current_user(request: Request, db: SessionDep) -> User:
     raw = request.cookies.get(COOKIE)
     if not raw:
         raise HTTPException(401, "Please sign in.")
-    row = db.scalars(select(UserSession).where(UserSession.token_hash == _digest(raw))).first()
+    row = db.scalars(select(UserSession).where(UserSession.token_hash == digest(raw))).first()
     if row is None:
         raise HTTPException(401, "Please sign in.")
     if row.expires_at <= datetime.now(UTC):
@@ -71,13 +71,20 @@ def current_user(request: Request, db: SessionDep) -> User:
 CurrentUser = Annotated[User, Depends(current_user)]
 
 
+def _ready(user: User) -> None:
+    if user.must_change_password:
+        raise HTTPException(403, "Set your own password first.")
+
+
 def _hr(user: CurrentUser) -> User:
+    _ready(user)
     if user.role != "hr":
         raise HTTPException(403, "This area is for HR.")
     return user
 
 
 def _employee(user: CurrentUser) -> User:
+    _ready(user)
     if user.role != "employee" or user.employee_id is None:
         raise HTTPException(403, "This area is for employees.")
     return user
@@ -95,5 +102,10 @@ def require_same_origin(request: Request) -> None:
             raise HTTPException(403, "Request blocked: it did not come from this site.")
 
 
+WELCOME = "/welcome"
+
+
 def home_for(user: User) -> str:
+    if user.must_change_password:
+        return WELCOME
     return "/hr" if user.role == "hr" else "/me"

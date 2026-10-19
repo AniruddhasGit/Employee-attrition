@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandLabel, money, pct, signedPct } from "./format";
+import { bandLabel, money, odds, pct, signedPct } from "./format";
 
 describe("format", () => {
   it("formats probabilities as whole percents", () => {
@@ -19,5 +19,10 @@ describe("format", () => {
   it("labels bands", () => {
     expect(bandLabel("high")).toBe("High");
     expect(bandLabel("elevated")).toBe("Elevated");
+  });
+  it("reads odds ratios with a direction", () => {
+    expect(odds(1.84)).toEqual({ text: "×1.8 odds", tone: "raises" });
+    expect(odds(0.6)).toEqual({ text: "×0.6 odds", tone: "lowers" });
+    expect(odds(1.02).tone).toBe("none");
   });
 });

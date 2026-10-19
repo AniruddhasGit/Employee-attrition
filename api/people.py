@@ -27,9 +27,29 @@ def current_features(db, e: Employee) -> dict:
     return {**effective_features(e.features, record, latest.answers), **newer}
 
 
+def current_features_bulk(db, staff: list[Employee]) -> dict[int, dict]:
+    """current_features for many people with one check-in query."""
+    latest: dict[int, CheckIn] = {}
+    for c in db.scalars(select(CheckIn).order_by(CheckIn.quarter)):
+        latest[c.employee_id] = c
+    out = {}
+    for e in staff:
+        c, record, times = latest.get(e.employee_id), e.record or {}, e.record_times or {}
+        if c is None:
+            out[e.employee_id] = effective_features(e.features, record, None)
+            continue
+        newer = {k: v for k, v in record.items()
+                 if k in times and datetime.fromisoformat(times[k]) > c.submitted_at}
+        out[e.employee_id] = {**effective_features(e.features, record, c.answers), **newer}
+    return out
+
+
 def rescore(db, e: Employee) -> float:
     """Recompute the person's score and drivers from their current inputs (no commit)."""
+    from api.questions import adjusted
+
     svc = get_service()
     p, drivers = svc.score_row(current_features(db, e), e.fold)
+    p = adjusted(db, e.employee_id, p)
     e.risk_score, e.risk_band, e.drivers = p, svc.band(p), drivers
     return p

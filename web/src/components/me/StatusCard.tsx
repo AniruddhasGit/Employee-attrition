@@ -1,13 +1,13 @@
 "use client";
 
-import { CheckIcon, ClockIcon, LockSimpleIcon } from "@phosphor-icons/react/dist/ssr";
+import { CheckIcon, ClockIcon, LockSimpleIcon, SparkleIcon } from "@phosphor-icons/react/dist/ssr";
 import { motion, useReducedMotion } from "motion/react";
 import { PillButton } from "@/components/ui/PillButton";
 import { EASE_OUT } from "@/lib/motion";
 import { fmtQuarter } from "./labels";
 
-/** This quarter's check-in: an invitation while open, a calm confirmation once done. */
-export function StatusCard({ quarter, status }: { quarter: string; status: "open" | "done" }) {
+/** This quarter's check-in: an invitation while open, a calm confirmation once done (with a nudge if HR added questions since). */
+export function StatusCard({ quarter, status, newQuestions = 0 }: { quarter: string; status: "open" | "done"; newQuestions?: number }) {
   const reduce = useReducedMotion();
   const q = fmtQuarter(quarter);
 
@@ -38,10 +38,33 @@ export function StatusCard({ quarter, status }: { quarter: string; status: "open
               </p>
             </div>
           </div>
-          <PillButton href="/me/check-in" className="w-fit shrink-0">
-            Update my answers
-          </PillButton>
+          {newQuestions === 0 && (
+            <PillButton href="/me/check-in" className="w-fit shrink-0">
+              Update my answers
+            </PillButton>
+          )}
         </div>
+        {newQuestions > 0 && (
+          <div
+            data-testid="new-questions"
+            className="relative mt-8 flex flex-col gap-5 rounded-2xl bg-ink p-5 text-bg sm:flex-row sm:items-center sm:justify-between md:p-6"
+          >
+            <div className="flex items-start gap-4">
+              <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-bg/15">
+                <SparkleIcon size={18} weight="fill" />
+              </span>
+              <div>
+                <p className="text-lg font-semibold leading-snug tracking-[-0.015em]">
+                  HR added {newQuestions} new {newQuestions === 1 ? "question" : "questions"}.
+                </p>
+                <p className="mt-1 text-sm text-bg/70">Answer {newQuestions === 1 ? "it" : "them"} to update your check-in. It takes a minute.</p>
+              </div>
+            </div>
+            <PillButton href="/me/check-in" className="w-fit shrink-0">
+              Answer the new {newQuestions === 1 ? "question" : "questions"}
+            </PillButton>
+          </div>
+        )}
       </div>
     );
   }
@@ -73,7 +96,7 @@ export function StatusCard({ quarter, status }: { quarter: string; status: "open
             How is this quarter going for you?
           </p>
           <p className="mt-5 max-w-[48ch] leading-relaxed text-night-ink/70">
-            Eight short questions, then what would keep you here. Your answers help HR decide what to fix next.
+            A few short questions, then what would keep you here. Your answers help HR decide what to fix next.
           </p>
           <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center">
             <PillButton href="/me/check-in" className="w-fit">
@@ -96,7 +119,7 @@ export function StatusCard({ quarter, status }: { quarter: string; status: "open
   );
 }
 
-/** A quiet preview of the flow: eight question marks, then the one choice at the end. */
+/** A quiet preview of the flow: the questions, then the one choice at the end. */
 function Steps({ reduce }: { reduce: boolean }) {
   return (
     <div aria-hidden className="hidden flex-col items-end gap-3 md:flex">
@@ -112,7 +135,7 @@ function Steps({ reduce }: { reduce: boolean }) {
           />
         ))}
       </div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-night-ink/50">8 questions · 1 choice</p>
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-night-ink/50">Questions · 1 choice</p>
     </div>
   );
 }

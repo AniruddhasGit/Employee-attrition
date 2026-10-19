@@ -49,15 +49,20 @@ def to_api_answers(answers: dict) -> dict:
 
 
 def submit_checkin(db, employee: Employee, answers: dict, keep_me: list[str], comment: str,
-                   today: date) -> CheckIn:
+                   today: date, custom: dict[int, int] | None = None,
+                   intent: int | None = None) -> CheckIn:
     """Save this quarter's check-in (replacing an earlier one) and re-score the person.
 
-    `answers` is keyed by model column.
+    `answers` is keyed by model column; `custom` maps added question ids to the chosen option.
     """
+    from api.questions import adjusted, save_answers
+
     svc = get_service()
     quarter = quarter_of(today)
+    save_answers(db, employee.employee_id, quarter, custom or {}, intent)
     p, drivers = svc.score_row(effective_features(employee.features, employee.record or {},
                                                   answers), employee.fold)
+    p = adjusted(db, employee.employee_id, p)
     row = db.scalars(select(CheckIn).where(CheckIn.employee_id == employee.employee_id,
                                            CheckIn.quarter == quarter)).first()
     if row is None:

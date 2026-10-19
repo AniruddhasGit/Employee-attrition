@@ -61,7 +61,7 @@ export function Home() {
       </header>
 
       <Reveal y={16} delay={0.06} className="mt-10 md:mt-14">
-        <StatusCard quarter={d.quarter} status={d.checkInStatus} />
+        <StatusCard quarter={d.quarter} status={d.checkInStatus} newQuestions={d.newQuestions} />
       </Reveal>
 
       <div className="mt-6 grid gap-6 md:grid-cols-12 md:items-start">

@@ -1,17 +1,18 @@
 """HR area: the people list, a person's page, the what-if simulator and action plans."""
 
+import math
 from datetime import UTC, date, datetime
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from pydantic import Field
+from pydantic import EmailStr, Field
 from sqlalchemy import select
 
-from api import ratelimit
+from api import onboarding, questions, ratelimit
 from api.auth import HrUser
 from api.checkins import to_api_answers
 from api.db import SessionDep
-from api.models import ActionPlan, CheckIn, Employee
+from api.models import ActionPlan, CheckIn, CustomAnswer, CustomQuestion, Employee, StayIntent
 from api.people import current_features, rescore
 from api.quarters import previous, quarter_of
 from api.routes.hr import checkins_for, staff
@@ -22,6 +23,7 @@ from api.service import get_service
 router = APIRouter(prefix="/api/hr")
 
 PLANS_PER_HOUR = 60
+PEOPLE_PER_HOUR = 30
 TREND = 0.02
 
 ActionKey = Literal["pay_review", "promotion", "reduce_overtime", "stock_grant", "training_plan",
@@ -107,7 +109,35 @@ def person(employee_id: int, user: HrUser, db: SessionDep) -> dict:
                       "submittedAt": c.submitted_at.isoformat()} for c in rows],
         "change": change,
         "plans": [_plan_out(p, rows) for p in plans],
+        "addedQuestions": _added_answers(db, employee_id),
+        "stayIntent": _stay_intent(db, employee_id),
     }
+
+
+def _added_answers(db, employee_id: int) -> list[dict]:
+    """This person's latest answer to each added question still on the check-in or in the scores."""
+    out = []
+    rows = db.execute(select(CustomAnswer, CustomQuestion)
+                      .join(CustomQuestion, CustomQuestion.id == CustomAnswer.question_id)
+                      .where(CustomAnswer.employee_id == employee_id)
+                      .order_by(CustomQuestion.id, CustomAnswer.quarter)).all()
+    latest = {q.id: (a, q) for a, q in rows}
+    for a, q in latest.values():
+        effect = None
+        if q.weights is not None and a.option < len(q.weights):
+            effect = round(math.exp(q.weights[a.option]), 3)
+        out.append({"question": q.label, "answer": q.options[a.option], "quarter": a.quarter,
+                    "status": q.status, "oddsRatio": effect})
+    return out
+
+
+def _stay_intent(db, employee_id: int) -> dict | None:
+    row = db.scalars(select(StayIntent).where(StayIntent.employee_id == employee_id)
+                     .order_by(StayIntent.quarter.desc())).first()
+    if row is None:
+        return None
+    return {"value": row.value, "label": questions.INTENT_LABELS[row.value],
+            "quarter": row.quarter}
 
 
 @router.post("/simulate", response_model=SimulateOut, response_model_by_alias=True)
@@ -117,6 +147,7 @@ def simulate(body: SimulateIn, user: HrUser, db: SessionDep):
     overrides = body.levers.to_features()
     if overrides:
         after, drivers = svc.score_row(current_features(db, e), e.fold, overrides)
+        after = questions.adjusted(db, e.employee_id, after)
     else:
         after, drivers = e.risk_score, e.drivers
     return SimulateOut(before=e.risk_score, after=after, delta=round(after - e.risk_score, 6),
@@ -139,7 +170,8 @@ def create_plan(employee_id: int, body: PlanIn, user: HrUser, db: SessionDep) ->
     e = _person(db, employee_id)
     svc = get_service()
     feats = current_features(db, e)
-    estimate = svc.score_row(apply_action(feats, body.action), e.fold)[0]
+    estimate = questions.adjusted(db, employee_id,
+                                  svc.score_row(apply_action(feats, body.action), e.fold)[0])
     plan = ActionPlan(employee_id=employee_id, action=body.action, note=body.note.strip(),
                       created_quarter=quarter_of(date.today()), created_by=user.id,
                       score_at_creation=e.risk_score, estimated_score=estimate, status="open",
@@ -167,3 +199,39 @@ def finish_plan(plan_id: int, body: PlanPatch, user: HrUser, db: SessionDep) -> 
         rescore(db, e)
         db.commit()
     return _plan_out(plan, _checkins(db, e.employee_id))
+
+
+class NewPersonIn(CamelModel):
+    name: str = Field(min_length=2, max_length=80)
+    email: EmailStr = Field(max_length=254)
+    password: str = Field(min_length=8, max_length=200)
+    department: str = Field(max_length=64)
+    job_role: str = Field(max_length=64)
+    job_level: int = Field(ge=1, le=5)
+    monthly_income: int = Field(ge=1000, le=25000)
+    years_at_company: int = Field(ge=0, le=40)
+    over_time: Literal["Yes", "No"]
+    business_travel: Literal["Non-Travel", "Travel_Rarely", "Travel_Frequently"]
+
+
+@router.get("/roles")
+def roles(user: HrUser, db: SessionDep) -> dict:
+    """Departments and the job roles in each, for the add-person form."""
+    return {"departments": [{"department": d, "roles": r}
+                            for d, r in onboarding.roles(db).items()]}
+
+
+@router.post("/people", status_code=201)
+def add_person(body: NewPersonIn, user: HrUser, db: SessionDep) -> dict:
+    if not ratelimit.allow(f"people:{user.id}", PEOPLE_PER_HOUR, 3600):
+        raise HTTPException(429, "That's a lot of new people this hour. Come back later.")
+    if not body.name.strip() or not body.password.strip():
+        raise HTTPException(422, "Name and password can't be only spaces.")
+    person, account = onboarding.add_person(
+        db, name=body.name, email=str(body.email), password=body.password,
+        department=body.department, job_role=body.job_role, job_level=body.job_level,
+        monthly_income=body.monthly_income, years_at_company=body.years_at_company,
+        over_time=body.over_time, business_travel=body.business_travel)
+    db.commit()
+    return {"id": person.employee_id, "name": person.name, "email": account.email,
+            "riskScore": person.risk_score, "riskBand": person.risk_band}

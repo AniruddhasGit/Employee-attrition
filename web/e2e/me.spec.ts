@@ -25,7 +25,7 @@ test("an employee who has not answered sees the open check-in", async ({ page })
   await expectNoScores(page);
 });
 
-test("completing all nine steps returns home in the done state", async ({ page }) => {
+test("completing all ten steps returns home in the done state", async ({ page }) => {
   test.setTimeout(180_000);
   await signInAs(page, "not_answered");
   await page.getByRole("link", { name: /Start this quarter's check-in/ }).click();
@@ -45,20 +45,20 @@ test("completing all nine steps returns home in the done state", async ({ page }
   await next.click();
 
   // Back keeps the answer.
-  await expect(page.getByText("2 of 9")).toBeVisible();
+  await expect(page.getByText("2 of 10")).toBeVisible();
   await page.getByRole("button", { name: "Back", exact: true }).click();
   await expect(page.getByRole("radiogroup").getByRole("radio").nth(1)).toHaveAttribute("aria-checked", "true");
   await next.click();
 
-  // Steps 2 to 8.
-  for (let step = 2; step <= 8; step++) {
-    await expect(page.getByText(`${step} of 9`)).toBeVisible();
+  // Steps 2 to 9 (the ninth is stay intent; the demo starts with no questions added by HR).
+  for (let step = 2; step <= 9; step++) {
+    await expect(page.getByText(`${step} of 10`)).toBeVisible();
     await expect(next).toBeDisabled();
     await page.getByRole("radiogroup").getByRole("radio").last().click();
     await next.click();
   }
 
-  // Step 9: what would keep you here.
+  // Step 10: what would keep you here.
   await expect(page.getByRole("heading", { name: "What would keep you here" })).toBeVisible();
   await page.getByRole("button", { name: "Pay", exact: true }).click();
   await page.getByRole("button", { name: "Less overtime" }).click();

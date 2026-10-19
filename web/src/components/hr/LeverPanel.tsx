@@ -7,7 +7,7 @@ import { int } from "@/lib/format";
 type Full = Required<Levers>;
 
 /** Radio pills; the dark "selected" pill slides between options. */
-function Segmented<T extends string | number>({
+export function Segmented<T extends string | number>({
   name,
   label,
   options,

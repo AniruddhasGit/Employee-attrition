@@ -14,7 +14,8 @@ export type Driver = {
   text: string;
 };
 
-export type Session = { role: Role; displayName: string; home: "/hr" | "/me" };
+/** `home` is "/welcome" while the account is still on the temporary password HR gave it. */
+export type Session = { role: Role; displayName: string; home: "/hr" | "/me" | "/welcome"; mustChangePassword: boolean };
 
 export type Option = { value: string | number; label: string };
 export type Question = {
@@ -43,6 +44,8 @@ export type MeHome = {
   jobRole: string;
   quarter: string;
   checkInStatus: "open" | "done";
+  /** Questions HR added that this person hasn't answered yet. */
+  newQuestions: number;
   keepMe: string[];
   comment: string | null;
   keepMeOptions: KeepOption[];
@@ -55,7 +58,16 @@ export type CheckInForm = {
   notice: string;
   questions: Question[];
   keepMeOptions: KeepOption[];
-  current: { answers: Answers; keepMe: string[]; comment: string } | null;
+  /** Questions HR added; each option's value is its index. */
+  customQuestions: { id: number; label: string; options: { value: number; label: string }[] }[];
+  intentQuestion: IntentQuestion;
+  current: {
+    answers: Answers;
+    keepMe: string[];
+    comment: string;
+    custom: Record<string, number>;
+    stayIntent: number | null;
+  } | null;
 };
 
 export type Levers = {
@@ -199,7 +211,31 @@ export type Person = {
   checkIns: { quarter: string; answers: Answers; keepMe: string[]; comment: string | null; submittedAt: string }[];
   change: string | null;
   plans: Plan[];
+  addedQuestions: {
+    question: string;
+    answer: string;
+    quarter: string;
+    status: AddedQuestion["status"];
+    oddsRatio: number | null;
+  }[];
+  stayIntent: { value: number; label: string; quarter: string } | null;
 };
+
+export type RoleCatalog = { departments: { department: string; roles: string[] }[] };
+
+export type NewPerson = {
+  name: string;
+  email: string;
+  password: string;
+  department: string;
+  jobRole: string;
+  jobLevel: number;
+  monthlyIncome: number;
+  yearsAtCompany: number;
+  overTime: "Yes" | "No";
+  businessTravel: Travel;
+};
+export type AddedPerson = { id: number; name: string; email: string; riskScore: number; riskBand: Band };
 
 export type CheckInStatus = {
   quarter: string;
@@ -258,12 +294,11 @@ function qs(params: Record<string, string | number | undefined>): string {
 export const signIn = (email: string, password: string) => post<Session>("/api/auth/login", { email, password });
 export const signOut = () => post<void>("/api/auth/logout", {});
 export const getSession = () => request<Session>("/api/auth/me");
+export const setPassword = (password: string) => post<Session>("/api/auth/password", { password });
 
 // Employee
 export const getMe = () => request<MeHome>("/api/me");
 export const getCheckInForm = () => request<CheckInForm>("/api/me/check-in");
-export const submitCheckIn = (body: { answers: Answers; keepMe: string[]; comment: string }) =>
-  post<{ quarter: string; status: "done" }>("/api/me/check-in", body);
 
 // HR
 export const getDashboard = (replacementPct = 50) => request<Dashboard>(`/api/hr/dashboard${qs({ replacementPct })}`);
@@ -275,9 +310,59 @@ export const simulate = (employeeId: number, levers: Levers) =>
 export const createPlan = (employeeId: number, action: ActionKey, note = "") =>
   post<Plan>(`/api/hr/people/${employeeId}/plans`, { action, note });
 export const markPlanDone = (planId: number) => post<Plan>(`/api/hr/plans/${planId}`, { status: "done" }, "PATCH");
+export const getRoles = () => request<RoleCatalog>("/api/hr/roles");
+export const addPerson = (body: NewPerson) => post<AddedPerson>("/api/hr/people", body);
 export const getCheckIns = () => request<CheckInStatus>("/api/hr/check-ins");
 export const postUpdate = (body: { department: string; said: string; did: string }) =>
   post<TeamNote & { id: number; department: string }>("/api/hr/updates", body);
 export const getPublicSummary = () => request<PublicSummary>("/api/public/summary");
 export const sendContact = (body: { name: string; email: string; message: string; consent: boolean; website: string }) =>
   post<{ ok: true }>("/api/contact", body);
+
+// Added check-in questions (HR) and the recompute that folds them into the scores.
+export type IntentQuestion = { key: "stayIntent"; label: string; options: { value: number; label: string }[] };
+export type AddedQuestion = {
+  id: number;
+  label: string;
+  options: string[];
+  /** pending: asked, not in the scores yet. active: in the scores. removed: no longer asked, still in the scores until the next recompute. */
+  status: "pending" | "active" | "removed";
+  createdQuarter: string;
+  answered: number;
+  coverage: number;
+  /** Per option: how that answer multiplies the odds of leaving vs a typical answer. */
+  oddsRatios: number[] | null;
+};
+export type RecomputeResult = {
+  computedAt: string;
+  questions: number;
+  rescored: number;
+  bandChanges: number;
+  meanRiskBefore: number;
+  meanRiskAfter: number;
+  intentAuc: { baseOnly: number; withQuestions: number; n: number } | null;
+};
+export type QuestionStatus = {
+  headcount: number;
+  coverageNeeded: number;
+  maxQuestions: number;
+  intentQuestion: IntentQuestion;
+  questions: AddedQuestion[];
+  recompute: { needed: boolean; ready: boolean; reason: string | null; coverage: number | null; last: RecomputeResult | null };
+};
+export type NewQuestion = { label: string; options: string[] };
+
+export const getQuestions = () => request<QuestionStatus>("/api/hr/questions");
+export const addQuestions = (questions: NewQuestion[]) => post<QuestionStatus>("/api/hr/questions", { questions });
+export const removeQuestion = (id: number) => request<QuestionStatus>(`/api/hr/questions/${id}`, { method: "DELETE" });
+export const recomputeScores = () => post<QuestionStatus & { result: RecomputeResult }>("/api/hr/questions/recompute", {});
+export const fillSampleAnswers = () => post<QuestionStatus & { filled: number }>("/api/hr/questions/sample-answers", {});
+
+/** The full check-in, with the added questions (id -> option index) and stay intent (1-5). */
+export const sendCheckIn = (body: {
+  answers: Answers;
+  custom: Record<string, number>;
+  stayIntent: number;
+  keepMe: string[];
+  comment: string;
+}) => post<{ quarter: string; status: "done" }>("/api/me/check-in", body);

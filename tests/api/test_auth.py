@@ -12,7 +12,7 @@ def test_login_sets_httponly_cookie_and_routes_by_role(client, make_user, seeded
     hr = make_user("hr")
     r = login(client, hr.email)
     assert r.status_code == 200 and r.json() == {"role": "hr", "displayName": "Test hr",
-                                                 "home": "/hr"}
+                                                 "home": "/hr", "mustChangePassword": False}
     cookie = r.headers["set-cookie"]
     assert "retain_session=" in cookie and "HttpOnly" in cookie
     assert "samesite=lax" in cookie.lower() and "Path=/" in cookie

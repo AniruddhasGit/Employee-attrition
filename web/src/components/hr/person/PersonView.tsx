@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { BandChip } from "../BandChip";
 import { DriverBars } from "../DriverBars";
 import { ActionPlans } from "./ActionPlans";
+import { AddedAnswers } from "./AddedAnswers";
 import { CheckInAnswers } from "./CheckInAnswers";
 import { KeepMe } from "./KeepMe";
 import { RiskHistory } from "./RiskHistory";
@@ -167,6 +168,7 @@ function Loaded({ person, threshold, refresh }: { person: Person; threshold: num
 
         <Section n={3} id="answers" title="Check-in answers" aside="Their own words, quarter by quarter" className="col-span-12">
           <CheckInAnswers checkIns={person.checkIns} />
+          <AddedAnswers added={person.addedQuestions ?? []} intent={person.stayIntent ?? null} />
         </Section>
 
         <Section n={4} id="keep" title="What would keep them here" className="col-span-12 lg:col-span-5">

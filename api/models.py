@@ -28,6 +28,8 @@ class Employee(Base):
     employee_id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(80), default="")
     is_current: Mapped[bool] = mapped_column(Boolean, index=True, default=True)
+    # Added by HR in the app (not from the IBM data); the daily demo reset removes them.
+    added_by_hr: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     # HR record overlay: model inputs changed by completed action plans (e.g. a pay review).
     record: Mapped[dict] = mapped_column(Json, default=dict)
     # When HR changed each record field (ISO time); a field changed after a check-in outranks
@@ -80,6 +82,9 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(16))
     employee_id: Mapped[int | None] = mapped_column(ForeignKey("employees.employee_id"))
     display_name: Mapped[str] = mapped_column(String(80))
+    # Set when HR created the account with a temporary password: the first sign-in must replace it.
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False,
+                                                       server_default="false")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -149,3 +154,59 @@ class DemoState(Base):
 
     key: Mapped[str] = mapped_column(String(32), primary_key=True)
     value: Mapped[dict] = mapped_column(Json)
+
+
+class CustomQuestion(Base):
+    """A multiple-choice question HR added to the check-in.
+
+    pending: asked, not yet in the scores; active: its learned effect is in the scores;
+    removed: no longer asked, its effect leaves the scores at the next recompute.
+    """
+
+    __tablename__ = "custom_questions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    label: Mapped[str] = mapped_column(String(160))
+    options: Mapped[list] = mapped_column(Json)
+    status: Mapped[str] = mapped_column(String(8), default="pending", index=True)
+    # Learned shift in log-odds per option, set by a recompute; None until then.
+    weights: Mapped[list | None] = mapped_column(NullableJson, nullable=True)
+    created_quarter: Mapped[str] = mapped_column(String(7))
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class CustomAnswer(Base):
+    __tablename__ = "custom_answers"
+    __table_args__ = (UniqueConstraint("question_id", "employee_id", "quarter"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    question_id: Mapped[int] = mapped_column(
+        ForeignKey("custom_questions.id", ondelete="CASCADE"), index=True)
+    employee_id: Mapped[int] = mapped_column(
+        ForeignKey("employees.employee_id", ondelete="CASCADE"), index=True)
+    quarter: Mapped[str] = mapped_column(String(7))
+    option: Mapped[int]
+    simulated: Mapped[bool] = mapped_column(Boolean, default=False)
+    answered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now())
+
+
+class StayIntent(Base):
+    """'A year from now, do you see yourself still working here?' (1 = definitely, 5 = no).
+
+    Never a model input: it is the signal new questions are learned against, since nobody who
+    answered a brand-new question has had time to leave yet.
+    """
+
+    __tablename__ = "stay_intents"
+    __table_args__ = (UniqueConstraint("employee_id", "quarter"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    employee_id: Mapped[int] = mapped_column(
+        ForeignKey("employees.employee_id", ondelete="CASCADE"), index=True)
+    quarter: Mapped[str] = mapped_column(String(7))
+    value: Mapped[int]
+    simulated: Mapped[bool] = mapped_column(Boolean, default=False)
+    answered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now())

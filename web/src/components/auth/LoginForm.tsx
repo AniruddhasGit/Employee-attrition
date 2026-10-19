@@ -3,27 +3,28 @@
 import { ArrowRightIcon, CheckIcon, CircleNotchIcon, EyeIcon, EyeSlashIcon, WarningIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useId, useLayoutEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiError, signIn, type Session } from "@/lib/api";
 import { EASE_OUT } from "@/lib/motion";
 import { useSession } from "@/lib/session";
 import { CheckInPanel } from "./CheckInPanel";
+import { field, noRing, underline } from "./fields";
 
 function destination(session: Session, next: string | null): string {
+  // A temporary password goes to /welcome first, wherever ?next= points.
+  if (session.mustChangePassword) return "/welcome";
   // Only follow ?next= inside the area this account may use.
   return next && next.startsWith(session.home) ? next : session.home;
 }
 
 /** How long the "Welcome" state shows before the page changes. */
 const WELCOME_MS = 400;
+/** A sleeping free-tier server takes about a minute to wake: ask again this often, for this long. */
+const WAKE_RETRY_MS = 5_000;
+const WAKE_GIVE_UP_MS = 120_000;
 
-const field =
-  "peer w-full border-b border-line bg-transparent pb-2.5 pt-1 text-lg outline-none transition-colors duration-150 placeholder:text-mist focus:border-transparent";
-// The global :focus-visible ring is unlayered CSS, so only an inline style can drop it; the drawn underline is the focus cue.
-const noRing = { outline: "none" } as const;
-// Underline that draws in from the left on focus, over the resting hairline.
-const underline =
-  "pointer-events-none absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-ink transition-transform duration-300 ease-[var(--ease-out)] peer-focus:scale-x-100";
+/** No answer, or the proxy's "upstream down": the server is asleep, not saying no. */
+const asleep = (err: unknown) => err instanceof ApiError && (err.status === 0 || err.status === 502);
 
 export function LoginForm() {
   const router = useRouter();
@@ -39,27 +40,49 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [shown, setShown] = useState(false);
   const [caps, setCaps] = useState(false);
+  const [waking, setWaking] = useState(false);
+  // False once the page goes away, so a wake-up retry loop stops instead of signing in behind it.
+  const alive = useRef(true);
 
   useEffect(() => {
     if (state.status === "signed-in" && welcome === null) router.replace(destination(state.session, next));
   }, [state, router, next, welcome]);
 
   // Next keeps this page alive while hidden; clear in-flight state so it never comes back frozen.
-  useLayoutEffect(
-    () => () => {
+  useLayoutEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
       setBusy(false);
+      setWaking(false);
       setWelcome(null);
       setError(null);
-    },
-    [],
-  );
+    };
+  }, []);
+
+  /** Sign in, quietly asking again while the server wakes up. Null if the page went away meanwhile. */
+  async function signInWhenAwake(): Promise<Session | null> {
+    const started = Date.now();
+    for (;;) {
+      try {
+        return await signIn(email, password);
+      } catch (err) {
+        if (!asleep(err) || Date.now() - started + WAKE_RETRY_MS > WAKE_GIVE_UP_MS) throw err;
+        setWaking(true);
+        await new Promise((r) => window.setTimeout(r, WAKE_RETRY_MS));
+        if (!alive.current) return null;
+      }
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     try {
-      const session = await signIn(email, password);
+      const session = await signInWhenAwake();
+      if (!session || !alive.current) return;
+      setWaking(false);
       setWelcome(session.displayName.split(" ")[0] || session.displayName);
       window.setTimeout(() => {
         // Full page load into the signed-in area, so no state from an earlier account survives.
@@ -67,8 +90,9 @@ export function LoginForm() {
       }, WELCOME_MS);
     } catch (err) {
       setBusy(false);
-      if (err instanceof ApiError && (err.status === 0 || err.status === 502)) {
-        setError("Can't reach the server. It sleeps when idle, so the first sign-in can take up to a minute.");
+      setWaking(false);
+      if (asleep(err)) {
+        setError("The server still isn't answering. Wait a minute, then sign in again.");
       } else {
         setError(err instanceof ApiError ? err.message : "Something went wrong.");
       }
@@ -229,6 +253,25 @@ export function LoginForm() {
               </AnimatePresence>
             </button>
           </motion.div>
+
+          <AnimatePresence initial={false}>
+            {waking && !welcome && (
+              <motion.p
+                role="status"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: reduce ? 0 : 0.25, ease: EASE_OUT }}
+                className="-mt-4 flex max-w-[40ch] items-start gap-2.5 overflow-hidden text-sm leading-relaxed text-muted"
+              >
+                <span className="relative mt-[7px] flex size-2 shrink-0" aria-hidden>
+                  <span className="absolute inset-0 rounded-full bg-calm opacity-60 motion-safe:animate-ping" />
+                  <span className="relative size-2 rounded-full bg-calm" />
+                </span>
+                Starting the server. This takes about a minute on the first visit.
+              </motion.p>
+            )}
+          </AnimatePresence>
         </form>
 
         <motion.p {...enter(5)} className="mt-14 text-xs text-mist">

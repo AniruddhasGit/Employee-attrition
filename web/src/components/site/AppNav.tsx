@@ -13,6 +13,7 @@ import { Logo } from "./Logo";
 const LINKS = {
   hr: [
     { href: "/hr", label: "Dashboard" },
+    { href: "/hr/questions", label: "Questions" },
     { href: "/hr/check-ins", label: "Check-ins" },
   ],
   employee: [
@@ -77,7 +78,7 @@ export function AppNav() {
                 <Link
                   href={l.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative block whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium transition-colors duration-200 ${
+                  className={`relative block whitespace-nowrap rounded-full px-2.5 py-1.5 sm:px-3.5 font-medium transition-colors duration-200 ${
                     active ? "text-bg" : "text-ink-soft hover:text-ink"
                   }`}
                 >

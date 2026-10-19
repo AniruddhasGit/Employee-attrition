@@ -8,6 +8,8 @@ const COLS: Record<number, string> = {
   2: "grid-cols-2",
   3: "grid-cols-1 sm:grid-cols-3",
   4: "grid-cols-2 md:grid-cols-4",
+  5: "grid-cols-2 sm:grid-cols-5",
+  6: "grid-cols-2 md:grid-cols-3",
 };
 
 /**
@@ -21,7 +23,8 @@ export function Question({
   onEnter,
   labelledBy,
 }: {
-  question: Q;
+  /** A core question, or an added one ("choice": plain tiles, like yes/no). */
+  question: { kind: Q["kind"] | "choice"; options: Option[] };
   value: Option["value"] | undefined;
   onChange: (v: Option["value"]) => void;
   onEnter: () => void;

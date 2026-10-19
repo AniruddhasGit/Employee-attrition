@@ -4,7 +4,7 @@ import { ArrowLeftIcon, CircleNotchIcon, EyeSlashIcon } from "@phosphor-icons/re
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ApiError, getCheckInForm, submitCheckIn, type Answers, type CheckInForm, type Option } from "@/lib/api";
+import { ApiError, getCheckInForm, sendCheckIn, type Answers, type CheckInForm, type Option, type Question as CoreQuestion } from "@/lib/api";
 import { EASE_OUT } from "@/lib/motion";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PillButton } from "@/components/ui/PillButton";
@@ -15,6 +15,20 @@ import { fmtQuarter } from "./labels";
 
 type Load = { status: "loading" } | { status: "error"; error: ApiError } | { status: "ready"; form: CheckInForm };
 
+/** One screen before the last: a core question, the stay-intent question, or a question HR added. */
+type Ask =
+  | { kind: "core"; question: CoreQuestion }
+  | { kind: "intent"; label: string; options: Option[] }
+  | { kind: "custom"; id: string; label: string; options: Option[] };
+
+function asks(form: CheckInForm): Ask[] {
+  return [
+    ...form.questions.map((question) => ({ kind: "core" as const, question })),
+    { kind: "intent" as const, label: form.intentQuestion.label, options: form.intentQuestion.options },
+    ...form.customQuestions.map((q) => ({ kind: "custom" as const, id: String(q.id), label: q.label, options: q.options })),
+  ];
+}
+
 const shell = "mx-auto max-w-[1400px] px-4 pb-24 pt-10 md:px-8 md:pt-16";
 
 /** The quarterly check-in: one question per screen, then what would keep you here. Prefills a re-take. */
@@ -22,6 +36,8 @@ export function CheckInFlow() {
   const router = useRouter();
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [answers, setAnswers] = useState<Partial<Answers>>({});
+  const [custom, setCustom] = useState<Record<string, number>>({});
+  const [intent, setIntent] = useState<number | undefined>(undefined);
   const [picks, setPicks] = useState<string[]>([]);
   const [comment, setComment] = useState("");
   const [step, setStep] = useState(0);
@@ -37,6 +53,14 @@ export function CheckInFlow() {
           setAnswers(form.current.answers);
           setPicks(form.current.keepMe);
           setComment(form.current.comment ?? "");
+          setCustom(form.current.custom ?? {});
+          setIntent(form.current.stayIntent ?? undefined);
+          // Updating a finished check-in (say HR added questions): open on the first one still unanswered.
+          const { custom: had, stayIntent } = form.current;
+          const open = asks(form).findIndex((q) =>
+            q.kind === "intent" ? stayIntent == null : q.kind === "custom" ? had?.[q.id] === undefined : false,
+          );
+          if (open > 0) setStep(open);
         }
         setLoad({ status: "ready", form });
       })
@@ -50,6 +74,8 @@ export function CheckInFlow() {
     () => () => {
       setLoad({ status: "loading" });
       setAnswers({});
+      setCustom({});
+      setIntent(undefined);
       setPicks([]);
       setComment("");
       setStep(0);
@@ -78,10 +104,20 @@ export function CheckInFlow() {
   }
 
   const { form } = load;
-  const total = form.questions.length + 1;
+  const steps = asks(form);
+  const total = steps.length + 1;
   const last = step === total - 1;
-  const question = last ? null : form.questions[step];
-  const answered = question ? answers[question.key] !== undefined : true;
+  const ask = last ? null : steps[step];
+  const value: Option["value"] | undefined =
+    ask?.kind === "core" ? answers[ask.question.key] : ask?.kind === "intent" ? intent : ask ? custom[ask.id] : undefined;
+  const answered = ask ? value !== undefined : true;
+
+  function choose(v: Option["value"]) {
+    if (!ask) return;
+    if (ask.kind === "core") setAnswers((a) => ({ ...a, [ask.question.key]: v }));
+    else if (ask.kind === "intent") setIntent(Number(v));
+    else setCustom((c) => ({ ...c, [ask.id]: Number(v) }));
+  }
 
   function go(to: number) {
     setDir(to > step ? 1 : -1);
@@ -97,7 +133,7 @@ export function CheckInFlow() {
     setSending(true);
     setSendError(null);
     try {
-      await submitCheckIn({ answers: answers as Answers, keepMe: picks, comment: comment.trim() });
+      await sendCheckIn({ answers: answers as Answers, custom, stayIntent: intent!, keepMe: picks, comment: comment.trim() });
       router.push("/me");
     } catch (e) {
       setSending(false);
@@ -113,7 +149,7 @@ export function CheckInFlow() {
             <span aria-hidden className="size-1.5 rounded-full bg-calm" />
             {fmtQuarter(form.quarter)} check-in{form.current ? " · updating your answers" : ""}
           </p>
-          <p className="font-mono text-xs tabular-nums text-muted">
+          <p className="shrink-0 whitespace-nowrap font-mono text-xs tabular-nums text-muted">
             {step + 1} of {total}
           </p>
         </div>
@@ -130,15 +166,18 @@ export function CheckInFlow() {
                   <p className="self-center text-sm leading-relaxed text-ink-soft">{form.notice}</p>
                 </div>
               )}
-              {question ? (
+              {ask ? (
                 <>
-                  <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">Question {step + 1}</p>
-                  <StepTitle id={`q-${step}`}>{question.label}</StepTitle>
+                  <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">
+                    Question {step + 1}
+                    {ask.kind === "custom" && <span className="text-calm"> · new from HR</span>}
+                  </p>
+                  <StepTitle id={`q-${step}`}>{ask.kind === "core" ? ask.question.label : ask.label}</StepTitle>
                   <div className="mt-10">
                     <Question
-                      question={question}
-                      value={answers[question.key] as Option["value"] | undefined}
-                      onChange={(v) => setAnswers((a) => ({ ...a, [question.key]: v }))}
+                      question={ask.kind === "core" ? ask.question : { kind: "choice", options: ask.options }}
+                      value={value}
+                      onChange={choose}
                       onEnter={next}
                       labelledBy={`q-${step}`}
                     />

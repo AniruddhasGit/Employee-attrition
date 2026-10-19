@@ -12,6 +12,7 @@ from datetime import UTC, date, datetime, time, timedelta
 import pandas as pd
 from sqlalchemy import delete, insert, select, update
 
+from api import questions
 from api.auth import hash_password, verify_password
 from api.models import ActionPlan, CheckIn, DemoState, Employee, TeamUpdate, User
 from api.models import Session as UserSession
@@ -174,12 +175,21 @@ def _email(name: str) -> str:
 # ---------------------------------------------------------------- seeding
 
 
+def _remove_added(db) -> None:
+    """Remove the people HR added in the app, with their logins (their rows go first)."""
+    added = select(Employee.employee_id).where(Employee.added_by_hr)
+    db.execute(delete(User).where(User.employee_id.in_(added)))
+    db.execute(delete(Employee).where(Employee.added_by_hr))
+
+
 def _wipe(db) -> None:
+    questions.clear(db)
     db.execute(delete(UserSession))
     db.execute(delete(User).where(User.email.like(f"%@{DOMAIN}")))
     db.execute(delete(CheckIn))
     db.execute(delete(ActionPlan))
     db.execute(delete(TeamUpdate))
+    _remove_added(db)
     db.execute(update(Employee).values(record={}, record_times={}))
     db.flush()
 
@@ -454,6 +464,10 @@ def reset(db, today: date, full: bool = False) -> None:
         db.execute(delete(model).where(~model.seeded))
     db.execute(delete(TeamUpdate).where(~TeamUpdate.seeded))
     db.execute(delete(UserSession))
+    added = set(db.scalars(select(Employee.employee_id).where(Employee.added_by_hr)))
+    rescore_all = questions.clear(db)
+    _remove_added(db)
+    touched -= added
 
     for row in db.scalars(select(CheckIn).where(CheckIn.seed_snapshot.is_not(None))):
         snap = row.seed_snapshot
@@ -488,6 +502,8 @@ def reset(db, today: date, full: bool = False) -> None:
 
     for eid in touched:
         rescore(db, db.get(Employee, eid))
+    if rescore_all:
+        questions.bulk_rescore(db)
     state = db.get(DemoState, "seed")
     state.value = {**state.value, "last_reset": datetime.now(UTC).isoformat()}
     db.commit()
@@ -518,7 +534,9 @@ def sync_passwords(db) -> int:
     Runs at startup, so changing the password on the host needs no reseed.
     """
     password = get_settings().demo_password
-    users = db.scalars(select(User).where(User.email.like(f"%@{DOMAIN}"))).all()
+    # Only the persona accounts: a person HR added keeps the password they chose.
+    emails = [p["email"] for p in personas(db)]
+    users = db.scalars(select(User).where(User.email.in_(emails))).all()
     stale = [u for u in users if not verify_password(u.password_hash, password)]
     if stale:
         new_hash = hash_password(password)

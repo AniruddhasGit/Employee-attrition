@@ -42,11 +42,12 @@ def health(deep: bool = False) -> dict:
     return out
 
 
-from api.routes import auth, contact, hr, hr_people, me, public  # noqa: E402
+from api.routes import auth, contact, hr, hr_people, hr_questions, me, public  # noqa: E402
 
 app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(hr.router)
 app.include_router(hr_people.router)
+app.include_router(hr_questions.router)
 app.include_router(public.router)
 app.include_router(contact.router)

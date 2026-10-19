@@ -27,3 +27,9 @@ const BAND_LABELS: Record<Band, string> = { low: "Low", elevated: "Elevated", hi
 export function bandLabel(band: Band): string {
   return BAND_LABELS[band];
 }
+
+/** An odds ratio as HR reads it, e.g. 1.84 -> "×1.8 odds"; `tone` says which way it pushes risk. */
+export function odds(ratio: number): { text: string; tone: "raises" | "lowers" | "none" } {
+  const text = `×${ratio >= 10 ? ratio.toFixed(0) : ratio.toFixed(1)} odds`;
+  return { text, tone: ratio >= 1.05 ? "raises" : ratio <= 0.95 ? "lowers" : "none" };
+}
