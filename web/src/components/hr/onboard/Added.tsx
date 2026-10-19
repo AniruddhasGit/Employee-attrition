@@ -5,7 +5,8 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { AddedPerson } from "@/lib/api";
 import { pct } from "@/lib/format";
-import { EASE_OUT } from "@/lib/motion";
+import { EASE_OUT, SPRING } from "@/lib/motion";
+import { CountUp, Stagger, StaggerItem } from "@/components/ui/motion";
 import { firstName } from "@/lib/onboard";
 import { PillButton } from "@/components/ui/PillButton";
 import { BandChip } from "../BandChip";
@@ -76,6 +77,7 @@ function Credentials({ email, password }: { email: string; password: string }) {
 
 /** After adding: what to hand over, where they start, and where to go next. */
 export function Added({ person, password, onAnother }: { person: AddedPerson; password: string; onAnother: () => void }) {
+  const reduce = useReducedMotion();
   const first = firstName(person.name);
   return (
     <section
@@ -83,12 +85,32 @@ export function Added({ person, password, onAnother }: { person: AddedPerson; pa
       aria-labelledby="added-title"
       className="rounded-2xl border border-line bg-surface p-5 sm:p-6 md:p-10"
     >
+      <Stagger onMount gap={0.07} delay={0.12}>
+      <StaggerItem>
       <p className="flex items-center gap-2.5 text-sm text-muted">
-        <span aria-hidden className="grid size-6 place-items-center rounded-full bg-ink text-bg">
-          <CheckIcon size={12} weight="bold" />
+        {/* The check pops in on a spring and sends out one soft ring: done, and it worked. */}
+        <span aria-hidden className="relative grid size-6 place-items-center">
+          {!reduce && (
+            <motion.span
+              className="absolute inset-0 rounded-full border border-ink"
+              initial={{ opacity: 0.5, scale: 1 }}
+              animate={{ opacity: 0, scale: 2.2 }}
+              transition={{ duration: 0.8, delay: 0.3, ease: EASE_OUT }}
+            />
+          )}
+          <motion.span
+            className="grid size-6 place-items-center rounded-full bg-ink text-bg"
+            initial={reduce ? false : { scale: 0.4, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ ...SPRING.snappy, delay: 0.15 }}
+          >
+            <CheckIcon size={12} weight="bold" />
+          </motion.span>
         </span>
         Added and scored
       </p>
+      </StaggerItem>
+      <StaggerItem>
       <h2
         id="added-title"
         className="mt-5 text-balance text-[clamp(2rem,4.5vw,3.25rem)] font-semibold leading-[1] tracking-[-0.04em]"
@@ -98,18 +120,25 @@ export function Added({ person, password, onAnother }: { person: AddedPerson; pa
       <p className="mt-4 max-w-[52ch] text-pretty leading-relaxed text-muted">
         Share these with {first}. They&apos;ll choose their own password on first sign-in.
       </p>
+      </StaggerItem>
 
-      <div className="mt-8">
+      <StaggerItem className="mt-8">
         <Credentials email={person.email} password={password} />
-      </div>
+      </StaggerItem>
+
+      <StaggerItem>
 
       <div className="mt-8 flex flex-col gap-4 border-t border-line pt-8 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-muted">Starting risk</p>
           <p className="mt-2 flex items-center gap-3">
-            <span data-testid="added-score" className="tabular text-4xl font-semibold tracking-[-0.03em]">
-              {pct(person.riskScore)}
-            </span>
+            <CountUp
+              testId="added-score"
+              value={person.riskScore}
+              format={(v) => pct(v)}
+              duration={0.9}
+              className="text-4xl font-semibold tracking-[-0.03em]"
+            />
             <BandChip band={person.riskBand} />
           </p>
         </div>
@@ -131,6 +160,8 @@ export function Added({ person, password, onAnother }: { person: AddedPerson; pa
           Add another
         </button>
       </div>
+      </StaggerItem>
+      </Stagger>
     </section>
   );
 }

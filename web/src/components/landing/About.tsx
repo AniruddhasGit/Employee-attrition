@@ -10,6 +10,7 @@ import {
 } from "@phosphor-icons/react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "motion/react";
 import { useRef } from "react";
+import { Stagger, StaggerItem } from "@/components/ui/motion";
 import { Reveal } from "@/components/ui/Reveal";
 import { Tag } from "@/components/ui/Tag";
 
@@ -84,19 +85,19 @@ export function About() {
               action HR takes is measured against the next quarter&apos;s answers.
             </p>
           </Reveal>
-          <ul className="mt-10 flex flex-wrap gap-2.5">
-            {TAGS.map(({ label, Icon }, i) => (
-              <Reveal as="li" key={label} delay={0.05 * i} y={12}>
+          <Stagger as="ul" delay={0.15} className="mt-10 flex flex-wrap gap-2.5">
+            {TAGS.map(({ label, Icon }) => (
+              <StaggerItem as="li" key={label}>
                 <Tag icon={<Icon size={14} />}>{label}</Tag>
-              </Reveal>
+              </StaggerItem>
             ))}
-          </ul>
+          </Stagger>
         </div>
       </div>
 
-      <ul className="mt-20 grid gap-px overflow-hidden rounded-2xl border border-line bg-line md:mt-28 md:grid-cols-3">
+      <Stagger as="ul" gap={0.08} className="mt-20 grid gap-px overflow-hidden rounded-2xl border border-line bg-line [clip-path:inset(0_round_1rem)] md:mt-28 md:grid-cols-3">
         {PRINCIPLES.map(({ title, body, Icon }, i) => (
-          <Reveal as="li" key={title} delay={0.06 * i} y={16} className="group bg-bg">
+          <StaggerItem as="li" key={title} className="group bg-bg">
             <div className="flex h-full flex-col gap-6 p-6 transition-colors duration-300 md:gap-10 md:p-8 hover:bg-surface">
               <div className="flex items-center justify-between">
                 <span className="grid size-11 place-items-center rounded-full border border-line bg-surface text-ink transition-transform duration-300 ease-out group-hover:-rotate-6">
@@ -109,9 +110,9 @@ export function About() {
                 <p className="mt-2 max-w-[38ch] leading-relaxed text-muted">{body}</p>
               </div>
             </div>
-          </Reveal>
+          </StaggerItem>
         ))}
-      </ul>
+      </Stagger>
     </section>
   );
 }

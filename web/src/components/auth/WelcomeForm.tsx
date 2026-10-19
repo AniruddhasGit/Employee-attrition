@@ -11,7 +11,9 @@ import { useSession } from "@/lib/session";
 import { SITE } from "@/lib/site";
 import { Logo } from "@/components/site/Logo";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { WordReveal } from "@/components/ui/motion";
 import { CheckInPanel } from "./CheckInPanel";
+import { BreathingDot, Collapse, useLabelSwap, usePanelEnter, useRowEnter } from "./motion";
 import { field, noRing, underline } from "./fields";
 
 /** How long the "You're in" state shows before the page changes. */
@@ -110,23 +112,9 @@ export function WelcomeForm() {
     setCaps(e.getModifierState("CapsLock"));
   }
 
-  const enter = (i: number) =>
-    reduce
-      ? {}
-      : {
-          initial: { opacity: 0, transform: "translateY(14px)" },
-          animate: { opacity: 1, transform: "translateY(0px)" },
-          transition: { duration: 0.6, delay: 0.08 + 0.06 * i, ease: EASE_OUT },
-        };
-
-  const swap = reduce
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
-    : {
-        initial: { opacity: 0, filter: "blur(4px)", transform: "translateY(6px)" },
-        animate: { opacity: 1, filter: "blur(0px)", transform: "translateY(0px)" },
-        exit: { opacity: 0, filter: "blur(4px)", transform: "translateY(-6px)" },
-        transition: { duration: 0.2, ease: EASE_OUT },
-      };
+  const enter = useRowEnter();
+  const swap = useLabelSwap();
+  const panel = usePanelEnter();
 
   const locked = busy || done;
 
@@ -135,16 +123,7 @@ export function WelcomeForm() {
       <WelcomeHeader />
       <main id="main" className="flex-1">
         <div className="mx-auto grid min-h-[calc(100dvh-4rem)] max-w-[1400px] grid-cols-1 gap-10 px-4 pb-16 pt-8 md:px-8 md:pt-12 lg:grid-cols-12 lg:gap-16">
-          <motion.div
-            {...(reduce
-              ? {}
-              : {
-                  initial: { opacity: 0, transform: "scale(0.985)" },
-                  animate: { opacity: 1, transform: "scale(1)" },
-                  transition: { duration: 0.8, ease: EASE_OUT },
-                })}
-            className="order-last lg:order-none lg:col-span-7"
-          >
+          <motion.div {...panel} className="order-last lg:order-none lg:col-span-7">
             <CheckInPanel />
           </motion.div>
 
@@ -159,18 +138,14 @@ export function WelcomeForm() {
             ) : (
               <>
                 <motion.p {...enter(0)} className="flex items-center gap-2 text-sm text-muted">
-                  <span className="relative flex size-2" aria-hidden>
-                    <span className="absolute inset-0 rounded-full bg-calm opacity-60 motion-safe:animate-ping" />
-                    <span className="relative size-2 rounded-full bg-calm" />
-                  </span>
+                  <BreathingDot />
                   Welcome, {firstName(session.displayName)}.
                 </motion.p>
-                <motion.h1
-                  {...enter(1)}
+                <WordReveal
+                  text="Make it yours."
+                  delay={0.1}
                   className="mt-4 text-[clamp(3.25rem,8vw,6.5rem)] font-semibold leading-[0.9] tracking-[-0.05em]"
-                >
-                  Make it yours.
-                </motion.h1>
+                />
                 <motion.p {...enter(2)} className="mt-5 max-w-[42ch] leading-relaxed text-muted">
                   You signed in with the temporary password HR gave you. Choose one only you know, and you&apos;re in.
                 </motion.p>
@@ -279,13 +254,12 @@ export function WelcomeForm() {
                         </motion.p>
                       )}
                     </AnimatePresence>
+                    <Collapse show={error !== null}>
+                      <p role="alert" className="mt-4 border-l-2 border-signal pl-3 text-sm leading-relaxed text-signal">
+                        {error}
+                      </p>
+                    </Collapse>
                   </motion.div>
-
-                  {error && (
-                    <p role="alert" className="-mt-3 border-l-2 border-signal pl-3 text-sm leading-relaxed text-signal">
-                      {error}
-                    </p>
-                  )}
 
                   <motion.div {...enter(5)} className="flex items-center gap-5">
                     <button
@@ -299,11 +273,15 @@ export function WelcomeForm() {
                             <CheckIcon size={15} weight="bold" aria-hidden />
                             You&apos;re in
                           </motion.span>
+                        ) : busy ? (
+                          <motion.span key="busy" {...swap} className="inline-flex items-center gap-2">
+                            <CircleNotchIcon size={15} className="animate-spin" aria-hidden />
+                            Save password
+                          </motion.span>
                         ) : (
                           <motion.span key="idle" {...swap} className="inline-flex items-center gap-2">
-                            {busy && <CircleNotchIcon size={15} className="animate-spin" aria-hidden />}
                             Save password
-                            {!busy && <ArrowRightIcon size={14} aria-hidden />}
+                            <ArrowRightIcon size={14} aria-hidden />
                           </motion.span>
                         )}
                       </AnimatePresence>

@@ -53,10 +53,18 @@ export function Updates({ updates, department }: { updates: TeamNote[]; departme
               <h3 className="font-mono text-xs uppercase tracking-[0.14em] text-muted">{fmtQuarter(g.quarter)}</h3>
               <ul className="mt-3 flex flex-col gap-3">
                 {g.notes.map((u, i) => (
-                  <li key={i} className="rounded-xl bg-bg/70 p-4 md:p-5">
+                  <li
+                    key={i}
+                    className="group/note rounded-xl bg-bg/70 p-4 ring-1 ring-transparent transition-[background-color,box-shadow] duration-200 ease-out hover:bg-bg hover:ring-line md:p-5"
+                  >
                     <p className="text-[15px] leading-relaxed text-muted">&ldquo;{u.said}&rdquo;</p>
                     <p className="mt-2.5 flex gap-2.5 font-medium leading-snug text-ink">
-                      <ArrowDownRightIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-calm" aria-hidden />
+                      <ArrowDownRightIcon
+                        size={16}
+                        weight="bold"
+                        className="mt-0.5 shrink-0 text-calm transition-transform duration-200 ease-out group-hover/note:translate-x-0.5 group-hover/note:translate-y-0.5 motion-reduce:group-hover/note:translate-0"
+                        aria-hidden
+                      />
                       <span>{u.did}</span>
                     </p>
                   </li>

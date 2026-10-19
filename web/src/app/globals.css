@@ -96,6 +96,8 @@
 html {
   color-scheme: light dark;
   scroll-behavior: smooth;
+  /* Keep the scrollbar's space so pages of different heights don't shift sideways. */
+  scrollbar-gutter: stable;
 }
 
 /* Lenis owns smooth scrolling when active. */
@@ -135,20 +137,40 @@ select option {
   color: var(--ink);
 }
 
+/* Page transition: a quick rise out of a soft blur. Opacity leads so there is never a blank frame. */
 .route-enter {
-  animation: route-in 450ms var(--ease-out) both;
+  animation: route-in 360ms var(--ease-out) both;
 }
 
 @keyframes route-in {
   from {
-    opacity: 0;
-    transform: translateY(10px);
+    opacity: 0.001;
+    transform: translate3d(0, 8px, 0);
     filter: blur(4px);
+  }
+  60% {
+    opacity: 1;
   }
   to {
     opacity: 1;
     transform: none;
     filter: none;
+  }
+}
+
+@keyframes route-fade {
+  from {
+    opacity: 0.001;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-enter {
+    animation: route-fade 160ms linear both;
+    animation-duration: 160ms !important;
   }
 }
 
@@ -171,7 +193,7 @@ select option {
 
 /* --- Site-chrome additions (additive only) --- */
 
-/* Skeleton shimmer: a soft band sweeps across with transform only. */
+/* Skeleton shimmer: a soft, wide band drifts across, then rests a beat. Transform only. */
 .skeleton-shimmer {
   position: relative;
   overflow: hidden;
@@ -182,16 +204,31 @@ select option {
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.45), transparent);
-  animation: skeleton-sweep 1.6s var(--ease-in-out) infinite;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.32) 50%,
+    transparent 80%
+  );
+  animation: skeleton-sweep 2s var(--ease-in-out) infinite;
+  will-change: transform;
 }
 @media (prefers-color-scheme: dark) {
   .skeleton-shimmer::after {
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgb(255 255 255 / 0.045) 50%,
+      transparent 80%
+    );
   }
 }
 @keyframes skeleton-sweep {
-  to {
+  0% {
+    transform: translateX(-100%);
+  }
+  70%,
+  100% {
     transform: translateX(100%);
   }
 }

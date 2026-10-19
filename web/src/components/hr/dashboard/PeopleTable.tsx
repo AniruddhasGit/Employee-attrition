@@ -1,13 +1,14 @@
 "use client";
 
 import { CaretLeftIcon, CaretRightIcon, MagnifyingGlassIcon, UsersThreeIcon } from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ApiError, listPeople, type Band, type PersonRow } from "@/lib/api";
 import { int } from "@/lib/format";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { CrossFade } from "../CrossFade";
 import { PeopleRow } from "./PeopleRow";
 
 const PAGE = 12;
@@ -124,7 +125,7 @@ export function PeopleTable({ departments }: { departments: string[] }) {
         </div>
       </div>
 
-      <div className="mt-8">
+      <CrossFade id={error ? "error" : rows ? "rows" : "loading"} className="mt-8">
         {error ? (
           <ErrorState message={error.message} status={error.status} onRetry={() => setAttempt((a) => a + 1)} />
         ) : !rows ? (
@@ -135,7 +136,7 @@ export function PeopleTable({ departments }: { departments: string[] }) {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-line bg-surface">
-          <table className={`w-full table-fixed text-sm transition-opacity duration-200 ease-out ${busy ? "opacity-60" : ""}`} aria-busy={busy}>
+          <table className={`relative w-full table-fixed text-sm transition-opacity duration-200 ease-out ${busy ? "opacity-60" : ""}`} aria-busy={busy}>
             <thead>
               <tr className="text-left text-xs uppercase tracking-[0.08em] text-muted">
                 <th className="w-[50%] py-3.5 pl-4 font-medium md:w-[26%] md:pl-6">Name</th>
@@ -150,9 +151,11 @@ export function PeopleTable({ departments }: { departments: string[] }) {
               </tr>
             </thead>
             <tbody>
-              {rows.items.map((p) => (
-                <PeopleRow key={p.id} p={p} onOpen={() => router.push(`/hr/people/${p.id}`)} />
-              ))}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {rows.items.map((p, i) => (
+                  <PeopleRow key={p.id} p={p} i={i} onOpen={() => router.push(`/hr/people/${p.id}`)} />
+                ))}
+              </AnimatePresence>
               {rows.items.length === 0 && (
                 <tr>
                   <td colSpan={6} className="border-t border-line px-4 py-14 text-center">
@@ -168,7 +171,7 @@ export function PeopleTable({ departments }: { departments: string[] }) {
           </table>
           </div>
         )}
-      </div>
+      </CrossFade>
 
       {rows && total > 0 && (
         <div className="mt-6 flex items-center justify-between gap-4 text-sm">

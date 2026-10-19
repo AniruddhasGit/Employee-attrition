@@ -17,6 +17,7 @@ import { PeopleTable } from "./dashboard/PeopleTable";
 import { Section } from "./dashboard/Section";
 import { SharpDrops } from "./dashboard/SharpDrops";
 import { TrustPanel } from "./dashboard/TrustPanel";
+import { CrossFade } from "./CrossFade";
 import { Heatmap } from "./Heatmap";
 
 const shell = "mx-auto max-w-[1400px] px-4 pb-24 pt-8 md:px-8 md:pt-14";
@@ -32,7 +33,13 @@ export function Dashboard() {
       </div>
     );
   }
-  return <div className={shell}>{data ? <Loaded d={data} /> : <Loading />}</div>;
+  // The header stays put while the skeleton below dissolves into the page.
+  return (
+    <div className={shell}>
+      <Header d={data ?? undefined} />
+      <CrossFade id={data ? "loaded" : "loading"}>{data ? <Loaded d={data} /> : <Loading />}</CrossFade>
+    </div>
+  );
 }
 
 function Header({ d }: { d?: Data }) {
@@ -117,7 +124,6 @@ function Loaded({ d }: { d: Data }) {
 
   return (
     <>
-      <Header d={d} />
       <JumpNav drops={d.sharpDrops.length} />
 
       <div className="mt-6 grid grid-cols-12 gap-3 md:mt-8">
@@ -197,7 +203,6 @@ function Loaded({ d }: { d: Data }) {
 function Loading() {
   return (
     <div aria-busy aria-label="Loading the dashboard">
-      <Header />
       <Skeleton className="mt-5 h-6 w-[min(36rem,100%)] rounded-full" />
       <div className="mt-8 flex gap-1.5 md:mt-10">
         {Array.from({ length: 4 }, (_, i) => (

@@ -6,6 +6,7 @@ import { useApi } from "@/lib/useApi";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Reveal } from "@/components/ui/Reveal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { CrossFade } from "../CrossFade";
 import { CheckInStatus } from "./CheckInStatus";
 import { MissingList } from "./MissingList";
 import { UpdateComposer } from "./UpdateComposer";
@@ -38,13 +39,20 @@ export function CheckInsView() {
   const [posted, setPosted] = useState<Update[]>([]);
   const [filter, setFilter] = useState(ALL);
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error?.message} status={error?.status} onRetry={retry} />;
+  if (!loading && (error || !data)) return <ErrorState message={error?.message} status={error?.status} onRetry={retry} />;
+  if (!data) {
+    return (
+      <CrossFade id="loading">
+        <Loading />
+      </CrossFade>
+    );
+  }
 
   const seen = new Set(posted.map((u) => u.id));
   const updates = [...posted, ...data.updates.filter((u) => !seen.has(u.id))];
 
   return (
+    <CrossFade id="loaded">
     <div className="space-y-20 md:space-y-28">
       <div className="grid gap-4 lg:grid-cols-12">
         <Reveal className="lg:col-span-7" y={16}>
@@ -84,5 +92,6 @@ export function CheckInsView() {
         </div>
       </section>
     </div>
+    </CrossFade>
   );
 }

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { ArrowUpIcon, ArrowUpRightIcon, DatabaseIcon } from "@phosphor-icons/react";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
+import { useRef } from "react";
 import { EASE_OUT } from "@/lib/motion";
 import { SITE } from "@/lib/site";
 import { Logo } from "./Logo";
@@ -57,13 +58,18 @@ function FooterLink({ label, href }: { label: string; href: string }) {
 export function Footer() {
   const reduce = useReducedMotion();
   const words = ["Get", "in", "touch"];
+  const ref = useRef<HTMLElement>(null);
+  // The corner light rises a little slower than the panel, so the dark slab reads as depth.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end end"] });
+  const glow = useTransform(scrollYProgress, (p) => (reduce ? "none" : `translate3d(0, ${(1 - p) * 90}px, 0)`));
 
   return (
-    <footer className="p-2">
+    <footer ref={ref} className="p-2">
       <div className="relative overflow-hidden rounded-2xl bg-night px-4 pb-6 pt-14 text-night-ink md:px-8 md:pt-20">
         {/* Soft light in the corner so the dark panel has depth, not a flat slab. */}
-        <div
+        <motion.div
           aria-hidden
+          style={{ transform: glow }}
           className="pointer-events-none absolute -right-40 -top-40 size-[520px] rounded-full bg-[radial-gradient(closest-side,rgb(143_176_204/0.16),transparent)]"
         />
         <div className="relative mx-auto max-w-[1400px]">

@@ -1,8 +1,9 @@
 "use client";
 
-import { CheckIcon } from "@phosphor-icons/react";
+import { motion, useReducedMotion } from "motion/react";
 import { useRef, type KeyboardEvent } from "react";
 import type { Option, Question as Q } from "@/lib/api";
+import { EASE_OUT, SPRING } from "@/lib/motion";
 
 const COLS: Record<number, string> = {
   2: "grid-cols-2",
@@ -14,7 +15,8 @@ const COLS: Record<number, string> = {
 
 /**
  * One check-in question as a radio group of large tiles. Arrow keys move the choice (as native radios do),
- * Home/End jump to the ends, Enter moves on.
+ * Home/End jump to the ends, Enter moves on. The ink highlight glides to the chosen tile on a spring and the
+ * check mark draws itself; tiles rise in one after another when the step appears. Reduced motion: no movement.
  */
 export function Question({
   question,
@@ -35,6 +37,7 @@ export function Question({
   const selected = opts.findIndex((o) => o.value === value);
   const scale = question.kind === "scale";
   const count = question.kind === "count";
+  const reduce = useReducedMotion();
 
   function choose(i: number) {
     onChange(opts[i].value);
@@ -67,7 +70,7 @@ export function Question({
       {opts.map((o, i) => {
         const on = i === selected;
         return (
-          <button
+          <motion.button
             key={String(o.value)}
             ref={(el) => {
               refs.current[i] = el;
@@ -80,23 +83,34 @@ export function Question({
             data-autofocus={on || (selected === -1 && i === 0) ? "" : undefined}
             onClick={() => choose(i)}
             onKeyDown={(e) => onKeyDown(e, i)}
-            className={`group relative flex flex-col justify-between rounded-2xl border p-4 text-left outline-none transition-[transform,translate,scale,background-color,border-color,color,box-shadow] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] md:p-5 ${
+            initial={reduce ? false : { opacity: 0, transform: "translateY(10px)" }}
+            animate={{ opacity: 1, transform: "translateY(0px)" }}
+            transition={{ duration: 0.4, delay: 0.06 + i * 0.035, ease: EASE_OUT }}
+            className={`group relative isolate flex flex-col justify-between rounded-2xl border p-4 text-left outline-none transition-[translate,scale,background-color,border-color,color,box-shadow] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] motion-reduce:active:scale-100 md:p-5 ${
               count ? "min-h-20 items-center justify-center" : scale ? "min-h-28 md:min-h-36" : "min-h-20 md:min-h-28"
             } ${
               on
-                ? "border-ink bg-ink text-bg shadow-[0_14px_32px_-16px_rgb(14_17_22/0.55)]"
-                : "border-line bg-surface text-ink hover:-translate-y-0.5 hover:border-ink/30 hover:shadow-[0_10px_24px_-18px_rgb(14_17_22/0.45)]"
+                ? `border-ink text-bg shadow-[0_14px_32px_-16px_rgb(14_17_22/0.55)] ${reduce ? "bg-ink" : "bg-surface"}`
+                : "border-line bg-surface text-ink hover:-translate-y-0.5 hover:border-ink/30 hover:shadow-[0_10px_24px_-18px_rgb(14_17_22/0.45)] motion-reduce:hover:translate-y-0"
             }`}
           >
+            {on && !reduce && (
+              <motion.span
+                aria-hidden
+                layoutId={`${labelledBy}-pick`}
+                transition={SPRING.snappy}
+                className="absolute -inset-px -z-10 rounded-2xl bg-ink"
+              />
+            )}
             {scale && <Level n={i + 1} on={on} />}
             {scale && (
               <span
                 aria-hidden
-                className={`absolute right-4 top-4 grid size-5 place-items-center rounded-full bg-bg text-ink transition-[transform,translate,scale,opacity] duration-200 ease-out md:right-5 md:top-5 ${
+                className={`absolute right-4 top-4 grid size-5 place-items-center rounded-full bg-bg text-ink transition-[scale,opacity] duration-200 ease-out md:right-5 md:top-5 ${
                   on ? "scale-100 opacity-100" : "scale-75 opacity-0"
                 }`}
               >
-                <CheckIcon size={12} weight="bold" />
+                <Tick on={on} reduce={!!reduce} />
               </span>
             )}
             {!scale && !count && (
@@ -104,16 +118,34 @@ export function Question({
                 aria-hidden
                 className={`grid size-5 place-items-center rounded-full border transition-colors duration-150 ${on ? "border-bg bg-bg text-ink" : "border-line"}`}
               >
-                <CheckIcon size={12} weight="bold" className={`transition-[transform,translate,scale,opacity] duration-200 ease-out ${on ? "scale-100 opacity-100" : "scale-50 opacity-0"}`} />
+                <Tick on={on} reduce={!!reduce} />
               </span>
             )}
             <span className={count ? "text-2xl font-semibold tabular-nums tracking-[-0.02em]" : "mt-6 text-lg font-medium leading-tight"}>
               {count && o.label === "6 or more" ? "6+" : o.label}
             </span>
-          </button>
+          </motion.button>
         );
       })}
     </div>
+  );
+}
+
+/** A check mark whose stroke draws in when chosen and clears at once when not. */
+function Tick({ on, reduce }: { on: boolean; reduce: boolean }) {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden>
+      <motion.path
+        d="M2.5 6.4 4.9 8.7 9.5 3.6"
+        stroke="currentColor"
+        strokeWidth={1.9}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={false}
+        animate={{ pathLength: on ? 1 : 0, opacity: on ? 1 : 0 }}
+        transition={on && !reduce ? { duration: 0.24, delay: 0.08, ease: EASE_OUT } : { duration: 0 }}
+      />
+    </svg>
   );
 }
 

@@ -3,12 +3,13 @@
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState } from "react";
 import { pct, signedPct } from "@/lib/format";
-import { EASE_OUT } from "@/lib/motion";
+import { EASE_IN_OUT, EASE_OUT } from "@/lib/motion";
 import { TipRow, Tooltip } from "@/components/charts/Tooltip";
 
 type Point = { quarter: string; riskScore: number };
 
 const H = 240;
+const DRAW = { once: true, amount: 0.5 } as const;
 const PAD = { top: 20, right: 16, bottom: 32, left: 40 };
 
 /** Tracks an element's width so the SVG draws at real pixels (crisp 12px labels at any size). */
@@ -105,8 +106,9 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
                 d={area}
                 fill={`url(#fill-${gid})`}
                 initial={reduce ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: reduce ? 0 : 0.35, ease: EASE_OUT }}
+                whileInView={{ opacity: 1 }}
+                viewport={DRAW}
+                transition={{ duration: 0.7, delay: reduce ? 0 : 0.45, ease: EASE_OUT }}
               />
             )}
 
@@ -118,8 +120,9 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
               strokeLinejoin="round"
               strokeLinecap="round"
               initial={reduce ? false : { pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.8, ease: EASE_OUT }}
+              whileInView={{ pathLength: 1 }}
+              viewport={DRAW}
+              transition={{ duration: 0.9, ease: EASE_IN_OUT }}
             />
 
             {history.map((h, i) => (
@@ -132,8 +135,10 @@ export function RiskHistory({ history, threshold }: { history: Point[]; threshol
                   stroke={flagged(h.riskScore) ? "var(--signal)" : "var(--series-1)"}
                   strokeWidth="2"
                   initial={reduce ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2, delay: reduce ? 0 : 0.15 + i * 0.06, ease: EASE_OUT }}
+                  whileInView={{ opacity: 1 }}
+                  viewport={DRAW}
+                  // Each point lands as the line reaches it.
+                  transition={{ duration: 0.2, delay: reduce ? 0 : history.length > 1 ? 0.05 + (i / (history.length - 1)) * 0.8 : 0.1, ease: EASE_OUT }}
                   tabIndex={0}
                   aria-label={`${h.quarter}: ${pct(h.riskScore)}`}
                   onFocus={() => setActive(i)}

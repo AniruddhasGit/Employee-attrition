@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowRightIcon, ListIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useMotionValueEvent, useReducedMotion, useScroll } from "motion/react";
 import { useEffect, useState } from "react";
-import { EASE_OUT } from "@/lib/motion";
+import { EASE_OUT, SPRING } from "@/lib/motion";
 import { SITE } from "@/lib/site";
 import { Logo } from "./Logo";
 
@@ -18,6 +18,8 @@ export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
+  // The link under the pointer: one shared pill glides between links instead of each lighting up on its own.
+  const [hovered, setHovered] = useState<string | null>(null);
 
   useMotionValueEvent(scrollY, "change", (y) => {
     const delta = y - (scrollY.getPrevious() ?? 0);
@@ -61,7 +63,9 @@ export function Nav() {
       >
         <div
           className={`transition-[background-color,border-color,box-shadow] duration-300 ${
-            solid ? "border-b border-line bg-bg/80 backdrop-blur-xl" : "border-b border-transparent"
+            solid
+              ? "border-b border-line bg-bg/75 shadow-[0_10px_30px_-24px_rgb(14_17_22/0.35)] backdrop-blur-xl backdrop-saturate-150"
+              : "border-b border-transparent"
           }`}
         >
           <nav aria-label="Main" className="mx-auto flex h-16 max-w-[1400px] items-center justify-between gap-4 px-4 md:px-8">
@@ -70,12 +74,26 @@ export function Nav() {
               {SITE.name}
             </Link>
 
-            <ul className="hidden items-center gap-1 text-sm md:flex">
+            <ul className="hidden items-center gap-1 text-sm md:flex" onMouseLeave={() => setHovered(null)}>
               {SITE.nav.map((item) => (
-                <li key={item.href}>
+                <li key={item.href} className="relative">
+                  {hovered === item.href && (
+                    <motion.span
+                      aria-hidden
+                      layoutId="nav-hover"
+                      className="absolute inset-0 rounded-full bg-surface"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={reduce ? { duration: 0 } : SPRING.snappy}
+                    />
+                  )}
                   <Link
                     href={item.href}
-                    className="rounded-full px-3.5 py-2 text-ink-soft transition-colors duration-150 hover:bg-surface hover:text-ink"
+                    onMouseEnter={() => setHovered(item.href)}
+                    onFocus={() => setHovered(item.href)}
+                    onBlur={() => setHovered(null)}
+                    className="relative block rounded-full px-3.5 py-2 text-ink-soft transition-colors duration-150 hover:text-ink"
                   >
                     {item.label}
                   </Link>

@@ -11,6 +11,7 @@ import { useApi } from "@/lib/useApi";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Segmented } from "../LeverPanel";
+import { CrossFade } from "../CrossFade";
 import { Added } from "./Added";
 
 const SHELL = "mx-auto max-w-[1400px] px-4 pb-24 pt-10 md:px-8 md:pt-14";
@@ -118,8 +119,16 @@ function Select({
 
 /** One numbered group of the form, styled like the dashboard's section kickers. */
 function Group({ n, title, children }: { n: string; title: string; children: ReactNode }) {
+  const reduce = useReducedMotion();
   return (
-    <fieldset className="rounded-2xl border border-line bg-surface p-5 sm:p-6 md:p-8">
+    // Each card rises in as it reaches the viewport; the first ones follow the header in a short cascade.
+    <motion.fieldset
+      initial={{ opacity: 0, y: reduce ? 0 : 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
+      transition={{ duration: reduce ? 0.2 : 0.6, delay: reduce ? 0 : 0.12 + (Number(n) - 1) * 0.07, ease: EASE_OUT }}
+      className="rounded-2xl border border-line bg-surface p-5 sm:p-6 md:p-8"
+    >
       <legend className="sr-only">{title}</legend>
       <p aria-hidden className="flex items-center gap-3 text-xs font-medium uppercase tracking-[0.14em] text-muted">
         <span className="tabular font-mono tracking-normal text-ink">{n}</span>
@@ -127,7 +136,7 @@ function Group({ n, title, children }: { n: string; title: string; children: Rea
         {title}
       </p>
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2">{children}</div>
-    </fieldset>
+    </motion.fieldset>
   );
 }
 
@@ -417,9 +426,11 @@ export function AddPerson() {
         <div className="col-span-12 min-w-0 lg:col-span-8">
           {error ? (
             <ErrorState message={error.message} status={error.status} onRetry={retry} />
-          ) : !data ? (
-            <FormSkeleton />
           ) : (
+            <CrossFade id={data ? "form" : "loading"}>
+            {!data ? (
+              <FormSkeleton />
+            ) : (
             <AnimatePresence mode="wait" initial={false}>
               {added ? (
                 <motion.div key="added" {...swap}>
@@ -431,6 +442,8 @@ export function AddPerson() {
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
+            </CrossFade>
           )}
         </div>
       </div>

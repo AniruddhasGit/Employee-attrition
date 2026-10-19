@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import type { Dashboard } from "@/lib/api";
 import { int, pct } from "@/lib/format";
 import { EASE_OUT } from "@/lib/motion";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { CountUp } from "@/components/ui/motion";
 
 /** Percentage-point change with one decimal, e.g. 0.0045 -> "+0.5 pts". */
 function pts(delta: number): string {
@@ -149,7 +149,7 @@ export function KpiStrip({ d }: { d: Dashboard }) {
           </span>
         }
       >
-        <AnimatedNumber value={d.headcount} format={int} />
+        <CountUp value={d.headcount} format={int} />
       </Tile>
       <Tile
         label="High risk"
@@ -162,7 +162,7 @@ export function KpiStrip({ d }: { d: Dashboard }) {
         }
       >
         <span className="text-signal">
-          <AnimatedNumber
+          <CountUp
             value={d.highRisk}
             format={int}
             testId="kpi-high-risk"
@@ -191,7 +191,7 @@ export function KpiStrip({ d }: { d: Dashboard }) {
           </span>
         }
       >
-        <AnimatedNumber value={d.meanRisk} format={(v) => pct(v, 1)} />
+        <CountUp value={d.meanRisk} format={(v) => pct(v, 1)} />
       </Tile>
       <Tile
         label="Check-in response"
@@ -203,7 +203,7 @@ export function KpiStrip({ d }: { d: Dashboard }) {
           </span>
         }
       >
-        <AnimatedNumber value={d.responseRate} format={(v) => pct(v)} />
+        <CountUp value={d.responseRate} format={(v) => pct(v)} />
       </Tile>
     </dl>
   );

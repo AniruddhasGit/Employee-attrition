@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
+import { Fragment } from "react";
 import { EASE_OUT } from "@/lib/motion";
 
 /**
@@ -34,18 +35,21 @@ export function WordReveal({
       variants={{ hidden: {}, shown: { transition: { staggerChildren: 0.06, delayChildren: delay } } }}
     >
       {words.map((w, i) => (
-        <span key={i} aria-hidden className="inline-block overflow-hidden pb-[0.08em] align-bottom">
-          <motion.span
-            className="inline-block"
-            variants={{
-              hidden: { transform: "translateY(105%)" },
-              shown: { transform: "translateY(0%)", transition: { duration: 0.8, ease: EASE_OUT } },
-            }}
-          >
-            {w}
-          </motion.span>
+        <Fragment key={i}>
+          <span aria-hidden className="inline-block overflow-hidden pb-[0.08em] align-bottom">
+            <motion.span
+              className="inline-block"
+              variants={{
+                hidden: { transform: "translateY(105%)" },
+                shown: { transform: "translateY(0%)", transition: { duration: 0.8, ease: EASE_OUT } },
+              }}
+            >
+              {w}
+            </motion.span>
+          </span>
+          {/* The space sits between the masks: inside an inline-block it would collapse. */}
           {i < words.length - 1 ? " " : null}
-        </span>
+        </Fragment>
       ))}
     </Comp>
   );

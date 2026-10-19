@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { createPlan, markPlanDone, simulate, type ActionKey, type Levers, type Plan } from "@/lib/api";
 import { pct } from "@/lib/format";
-import { EASE_OUT } from "@/lib/motion";
+import { EASE_OUT, SPRING } from "@/lib/motion";
 import { PillButton } from "@/components/ui/PillButton";
 
 const ACTIONS: { key: ActionKey; label: string }[] = [
@@ -79,9 +79,13 @@ function Actual({ change }: { change: number | null }) {
 }
 
 function PlanItem({ plan, onDone }: { plan: Plan; onDone: (id: number) => Promise<void> }) {
+  const reduce = useReducedMotion();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const done = plan.status === "done";
+  // Only a plan finished on this visit gets the check-off moment; ones already done just sit there.
+  const [doneOnArrival] = useState(done);
+  const justDone = done && !doneOnArrival;
 
   async function finish() {
     setBusy(true);
@@ -97,25 +101,60 @@ function PlanItem({ plan, onDone }: { plan: Plan; onDone: (id: number) => Promis
 
   return (
     <div className="flex gap-4 p-4 sm:p-5">
-      <span
-        aria-hidden
-        className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-full transition-colors duration-200 ${
-          done ? "bg-ink text-bg" : "border border-dashed border-mist text-mist"
-        }`}
-      >
-        {done ? <CheckIcon size={14} weight="bold" /> : <span className="size-1.5 rounded-full bg-current" />}
+      <span aria-hidden className="relative mt-0.5 grid size-8 shrink-0 place-items-center">
+        <AnimatePresence initial={false} mode="popLayout">
+          {done ? (
+            <motion.span
+              key="done"
+              className="grid size-8 place-items-center rounded-full bg-ink text-bg"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={reduce ? { duration: 0.15 } : SPRING.snappy}
+            >
+              <motion.span
+                className="grid place-items-center"
+                initial={reduce ? false : { opacity: 0, scale: 0.4, rotate: -20 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ ...SPRING.snappy, delay: 0.06 }}
+              >
+                <CheckIcon size={14} weight="bold" />
+              </motion.span>
+            </motion.span>
+          ) : (
+            <motion.span
+              key="open"
+              className="grid size-8 place-items-center rounded-full border border-dashed border-mist text-mist"
+              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.12 } }}
+            >
+              <span className="size-1.5 rounded-full bg-current" />
+            </motion.span>
+          )}
+        </AnimatePresence>
+        {/* One soft ring that spreads and fades: the plan is checked off. */}
+        {justDone && !reduce && (
+          <motion.span
+            className="pointer-events-none absolute inset-0 rounded-full border border-ink"
+            initial={{ opacity: 0.45, scale: 1 }}
+            animate={{ opacity: 0, scale: 1.9 }}
+            transition={{ duration: 0.7, ease: EASE_OUT }}
+          />
+        )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium">{plan.label}</h3>
-            <span
+            <motion.span
+              key={done ? "done" : "open"}
+              initial={justDone && !reduce ? { opacity: 0, scale: 0.85 } : false}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={SPRING.snappy}
               className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                 done ? "bg-ink text-bg" : "border border-line text-muted"
               }`}
             >
               {done ? "Done" : "Open"}
-            </span>
+            </motion.span>
             <span className="tabular text-xs text-muted">{plan.createdQuarter}</span>
           </div>
           {plan.note && <p className="mt-1 max-w-[56ch] text-sm text-muted">{plan.note}</p>}
@@ -125,16 +164,20 @@ function PlanItem({ plan, onDone }: { plan: Plan; onDone: (id: number) => Promis
           </div>
           {failed && <p className="mt-2 text-sm text-signal">Couldn&apos;t save that. Give it a moment, then click again.</p>}
         </div>
+        <AnimatePresence initial={false}>
         {!done && (
-          <button
+          <motion.button
+            key="mark"
+            exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.14, ease: EASE_OUT } }}
             type="button"
             onClick={finish}
             disabled={busy}
             className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 self-start rounded-full border border-line bg-surface px-4 text-sm font-medium transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-50 [@media(hover:hover)]:hover:border-ink/30 [@media(hover:hover)]:hover:bg-bg`}
           >
             <CheckIcon size={14} aria-hidden /> {busy ? "Saving" : "Mark done"}
-          </button>
+          </motion.button>
         )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -254,37 +297,44 @@ export function ActionPlans({
         </div>
       </form>
 
-      {plans.length === 0 ? (
-        <div className="flex items-center gap-4 rounded-2xl border border-dashed border-line px-5 py-6">
-          <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-mist">
-            <ListChecksIcon size={20} />
-          </span>
-          <div>
-            <p className="font-medium">No plans yet for this person</p>
-            <p className="mt-0.5 text-sm text-muted">
-              Add one above. Once it&apos;s marked done, the next check-in shows what really changed.
-            </p>
-          </div>
-        </div>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          <AnimatePresence initial={false}>
-            {plans.map((p) => (
-              <motion.li
-                key={p.id}
-                data-testid="plan"
-                layout={!reduce}
-                className="rounded-2xl border border-line bg-surface"
-                initial={{ opacity: 0, transform: reduce ? "none" : "translateY(-8px) scale(0.98)" }}
-                animate={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
-                transition={{ duration: 0.25, ease: EASE_OUT }}
-              >
-                <PlanItem plan={p} onDone={done} />
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </ul>
-      )}
+      <AnimatePresence initial={false}>
+        {plans.length === 0 && (
+          <motion.div
+            key="empty"
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            className="flex items-center gap-4 rounded-2xl border border-dashed border-line px-5 py-6"
+          >
+            <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-mist">
+              <ListChecksIcon size={20} />
+            </span>
+            <div>
+              <p className="font-medium">No plans yet for this person</p>
+              <p className="mt-0.5 text-sm text-muted">
+                Add one above. Once it&apos;s marked done, the next check-in shows what really changed.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Always mounted, so the very first plan animates in too. */}
+      <ul className={plans.length ? "flex flex-col gap-3" : "hidden"}>
+        <AnimatePresence initial={false} mode="popLayout">
+          {plans.map((p) => (
+            <motion.li
+              key={p.id}
+              data-testid="plan"
+              layout={!reduce}
+              className="rounded-2xl border border-line bg-surface"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.98, transition: { duration: 0.15, ease: EASE_OUT } }}
+              transition={{ duration: 0.3, ease: EASE_OUT, layout: { duration: 0.3, ease: EASE_OUT } }}
+            >
+              <PlanItem plan={p} onDone={done} />
+            </motion.li>
+          ))}
+        </AnimatePresence>
+      </ul>
     </div>
   );
 }

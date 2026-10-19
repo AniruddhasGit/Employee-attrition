@@ -136,21 +136,39 @@ function Card({ q, headcount, needed, onStatus }: { q: AddedQuestion; headcount:
 
 /** Every question HR has added, newest last, with how far each is from joining the scores. */
 export function QuestionList({ status, onStatus }: { status: QuestionStatus; onStatus: (s: QuestionStatus) => void }) {
-  if (status.questions.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-line px-6 py-12 text-center">
-        <p className="font-medium">No questions added yet</p>
-        <p className="mx-auto mt-1 max-w-[44ch] text-sm text-muted">
-          Add one with the form on this page. Employees see it at their next check-in, after the built-in questions.
-        </p>
-      </div>
-    );
-  }
+  const reduce = useReducedMotion();
   return (
-    <div className="space-y-3">
-      {status.questions.map((q) => (
-        <Card key={q.id} q={q} headcount={status.headcount} needed={status.coverageNeeded} onStatus={onStatus} />
-      ))}
+    // New questions rise in, removed ones fold away, and the rest glide into place.
+    <div className="flex flex-col gap-3">
+      <AnimatePresence initial={false} mode="popLayout">
+        {status.questions.map((q) => (
+          <motion.div
+            key={q.id}
+            layout={!reduce}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.985 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, transition: { duration: 0.16, ease: EASE_OUT } }}
+            transition={{ duration: 0.35, ease: EASE_OUT, layout: { duration: 0.3, ease: EASE_OUT } }}
+          >
+            <Card q={q} headcount={status.headcount} needed={status.coverageNeeded} onStatus={onStatus} />
+          </motion.div>
+        ))}
+        {status.questions.length === 0 && (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            transition={{ duration: 0.3, delay: reduce ? 0 : 0.1, ease: EASE_OUT }}
+            className="rounded-2xl border border-dashed border-line px-6 py-12 text-center"
+          >
+            <p className="font-medium">No questions added yet</p>
+            <p className="mx-auto mt-1 max-w-[44ch] text-sm text-muted">
+              Add one with the form on this page. Employees see it at their next check-in, after the built-in questions.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

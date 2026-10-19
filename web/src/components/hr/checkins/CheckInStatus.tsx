@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import type { CheckInStatus as Status } from "@/lib/api";
 import { pct } from "@/lib/format";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { CountUp } from "@/components/ui/motion";
 import { DepartmentBars } from "./DepartmentBars";
 
 /** This quarter's response rate, with the per-department breakdown. */
@@ -14,13 +13,6 @@ export function CheckInStatus({ status }: { status: Status }) {
   const waiting = total - answered;
   const rate = (d: Status["byDepartment"][number]) => (d.total ? d.answered / d.total : 1);
   const behind = rows.length > 1 ? [...rows].sort((a, b) => rate(a) - rate(b))[0] : null;
-
-  // Count up from zero once on arrival, so the headline lands with the page.
-  const [shown, setShown] = useState(0);
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setShown(status.responseRate));
-    return () => cancelAnimationFrame(id);
-  }, [status.responseRate]);
 
   return (
     <section
@@ -38,8 +30,9 @@ export function CheckInStatus({ status }: { status: Status }) {
       </div>
 
       <div className="mt-7 flex flex-wrap items-end gap-x-10 gap-y-5">
-        <AnimatedNumber
-          value={shown}
+        {/* Counts up from zero the first time it is seen, so the headline lands with the page. */}
+        <CountUp
+          value={status.responseRate}
           duration={1.1}
           format={(v) => pct(v)}
           testId="response-rate"

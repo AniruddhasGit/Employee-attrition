@@ -34,7 +34,7 @@ export function KeepMePicker({
           {Array.from({ length: MAX_PICKS }, (_, i) => (
             <span key={i} className="h-1.5 w-5 overflow-hidden rounded-full bg-haze/70">
               <span
-                className="block h-full origin-left rounded-full bg-ink transition-transform duration-200 ease-out"
+                className="block h-full origin-left rounded-full bg-ink transition-transform duration-300 ease-[cubic-bezier(0.34,1.36,0.64,1)] motion-reduce:transition-none"
                 style={{ transform: i < picks.length ? "scaleX(1)" : "scaleX(0)" }}
               />
             </span>
@@ -54,7 +54,7 @@ export function KeepMePicker({
                 aria-pressed={on}
                 disabled={full && !on}
                 onClick={() => toggle(o.key)}
-                className={`inline-flex min-h-12 items-center gap-2.5 rounded-full border pl-2 pr-5 text-[15px] outline-none transition-[transform,translate,scale,background-color,border-color,color,opacity] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 ${
+                className={`inline-flex min-h-12 items-center gap-2.5 rounded-full border pl-2 pr-5 text-[15px] outline-none transition-[scale,background-color,border-color,color,opacity] duration-150 ease-out focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 motion-reduce:active:scale-100 ${
                   on ? "border-ink bg-ink text-bg" : "border-line bg-surface text-ink enabled:hover:border-ink/30"
                 }`}
               >
@@ -65,7 +65,22 @@ export function KeepMePicker({
                   <KeepIcon k={o.key} size={15} />
                 </span>
                 {o.label}
-                {on ? <CheckIcon size={14} weight="bold" aria-hidden /> : <PlusIcon size={14} aria-hidden className="text-mist" />}
+                {/* The plus turns away as the check pops in (and back), so a pick reads at a glance. */}
+                <span aria-hidden className="grid size-3.5 place-items-center">
+                  <PlusIcon
+                    size={14}
+                    className={`col-start-1 row-start-1 text-mist transition-[rotate,scale,opacity] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:rotate-0 motion-reduce:scale-100 ${
+                      on ? "rotate-90 scale-50 opacity-0" : "rotate-0 scale-100 opacity-100"
+                    }`}
+                  />
+                  <CheckIcon
+                    size={14}
+                    weight="bold"
+                    className={`col-start-1 row-start-1 transition-[scale,opacity] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:scale-100 ${
+                      on ? "scale-100 opacity-100" : "scale-50 opacity-0"
+                    }`}
+                  />
+                </span>
               </button>
             </li>
           );

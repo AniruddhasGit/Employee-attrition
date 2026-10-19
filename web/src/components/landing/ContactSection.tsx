@@ -1,12 +1,13 @@
 "use client";
 
 import { ArrowUpRightIcon, CheckCircleIcon, CircleNotchIcon, EnvelopeSimpleIcon, FileTextIcon, GithubLogoIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState, type FormEvent } from "react";
 import { ApiError, sendContact } from "@/lib/api";
 import { EASE_OUT } from "@/lib/motion";
 import { SITE } from "@/lib/site";
 import { ArrowCircle } from "@/components/ui/ArrowCircle";
+import { Stagger, StaggerItem } from "@/components/ui/motion";
 import { Reveal } from "@/components/ui/Reveal";
 
 type Status = "idle" | "sending" | "sent" | "error";
@@ -33,6 +34,7 @@ const DIRECT = [
 export function ContactSection() {
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState("");
+  const reduce = useReducedMotion();
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -78,16 +80,16 @@ export function ContactSection() {
               every message.
             </p>
           </Reveal>
-          <ul className="mt-10 flex flex-col border-t border-line">
-            {DIRECT.map(({ label, detail, href, Icon }, i) => (
-              <Reveal as="li" key={label} delay={0.15 + 0.05 * i} y={10} className="border-b border-line">
+          <Stagger as="ul" delay={0.1} className="mt-10 flex flex-col border-t border-line">
+            {DIRECT.map(({ label, detail, href, Icon }) => (
+              <StaggerItem as="li" key={label} className="border-b border-line">
                 <a
                   href={href}
                   target={href.startsWith("http") ? "_blank" : undefined}
                   rel="noreferrer"
                   className="group flex items-center gap-4 py-4"
                 >
-                  <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-bg text-ink-soft">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-bg text-ink-soft transition-[color,border-color,transform] duration-200 ease-out group-hover:border-ink/25 group-hover:text-ink group-active:scale-[0.96]">
                     <Icon size={17} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -96,9 +98,9 @@ export function ContactSection() {
                   </span>
                   <ArrowUpRightIcon size={16} className="shrink-0 text-muted transition-transform duration-200 ease-out group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                 </a>
-              </Reveal>
+              </StaggerItem>
             ))}
-          </ul>
+          </Stagger>
         </div>
 
         <div data-testid="contact-form" className="col-span-12 md:col-span-6 md:col-start-7 md:pt-2">
@@ -107,14 +109,14 @@ export function ContactSection() {
               <motion.div
                 key="sent"
                 role="status"
-                initial={{ opacity: 0, transform: "translateY(8px)" }}
-                animate={{ opacity: 1, transform: "translateY(0px)" }}
+                initial={{ opacity: 0, transform: reduce ? "none" : "translateY(8px)" }}
+                animate={{ opacity: 1, transform: reduce ? "none" : "translateY(0px)" }}
                 transition={{ duration: 0.3, ease: EASE_OUT }}
                 className="flex flex-col items-start gap-4 border-t border-line pt-8"
               >
                 <motion.span
-                  initial={{ opacity: 0, transform: "scale(0.8)" }}
-                  animate={{ opacity: 1, transform: "scale(1)" }}
+                  initial={{ opacity: 0, transform: reduce ? "none" : "scale(0.8)" }}
+                  animate={{ opacity: 1, transform: reduce ? "none" : "scale(1)" }}
                   transition={{ type: "spring", duration: 0.45, bounce: 0.3, delay: 0.05 }}
                   className="grid size-12 place-items-center rounded-full bg-bg ring-1 ring-line"
                 >
@@ -127,7 +129,7 @@ export function ContactSection() {
               <motion.form
                 key="form"
                 onSubmit={onSubmit}
-                exit={{ opacity: 0, transform: "translateY(-8px)" }}
+                exit={{ opacity: 0, transform: reduce ? "none" : "translateY(-8px)" }}
                 transition={{ duration: 0.2, ease: EASE_OUT }}
                 className="grid grid-cols-1 gap-8 rounded-2xl border border-line bg-bg/60 p-5 sm:p-8 md:grid-cols-2"
                 noValidate={false}
@@ -178,12 +180,21 @@ export function ContactSection() {
                       <ArrowCircle inverted />
                     )}
                   </button>
-                  {status === "error" && (
-                    <p role="alert" className="flex items-start gap-2 text-sm text-ink-soft">
-                      <WarningCircleIcon size={16} className="mt-0.5 shrink-0 text-signal" />
-                      {error}
-                    </p>
-                  )}
+                  <AnimatePresence initial={false}>
+                    {status === "error" && (
+                      <motion.p
+                        role="alert"
+                        initial={{ opacity: 0, transform: reduce ? "none" : "translateX(-4px)" }}
+                        animate={{ opacity: 1, transform: "translateX(0px)" }}
+                        exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                        transition={{ duration: 0.2, ease: EASE_OUT }}
+                        className="flex items-start gap-2 text-sm text-ink-soft"
+                      >
+                        <WarningCircleIcon size={16} className="mt-0.5 shrink-0 text-signal" />
+                        {error}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.form>
             )}

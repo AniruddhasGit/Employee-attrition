@@ -16,6 +16,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Reveal } from "@/components/ui/Reveal";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { BandChip } from "../BandChip";
+import { CrossFade } from "../CrossFade";
 import { DriverBars } from "../DriverBars";
 import { ActionPlans } from "./ActionPlans";
 import { AddedAnswers } from "./AddedAnswers";
@@ -226,9 +227,12 @@ export function PersonView() {
       </div>
     );
   }
-  if (!data) return <PersonSkeleton />;
-  const person = fresh?.id === id ? fresh.person : data;
-  return <Loaded person={person} threshold={summary.data?.metrics.after.threshold ?? null} refresh={refresh} />;
+  const person = data && fresh?.id === id ? fresh.person : data;
+  return (
+    <CrossFade id={person ? "person" : "loading"}>
+      {person ? <Loaded person={person} threshold={summary.data?.metrics.after.threshold ?? null} refresh={refresh} /> : <PersonSkeleton />}
+    </CrossFade>
+  );
 }
 
 export function PersonSkeleton() {

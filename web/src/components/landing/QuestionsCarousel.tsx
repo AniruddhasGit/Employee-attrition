@@ -2,15 +2,20 @@
 
 import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getPublicSummary } from "@/lib/api";
 import { pct } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { CountUp } from "@/components/ui/motion";
 import { Reveal } from "@/components/ui/Reveal";
 import { Skeleton } from "@/components/ui/Skeleton";
 
-type Card = { question: string; stat: string; body: string; tone: string };
+/** A headline figure: counted up from zero the first time its card slides into view. */
+type Stat = { value: number; format: (v: number) => string };
+type Card = { question: string; stats: Stat[]; body: string; tone: string };
+
+const two = (v: number) => v.toFixed(2);
 
 async function loadCards(): Promise<Card[]> {
   const { riskiest, overtime, topDriver, metrics } = await getPublicSummary();
@@ -18,25 +23,28 @@ async function loadCards(): Promise<Card[]> {
   return [
     {
       question: "Who is most at risk?",
-      stat: pct(riskiest.meanRisk),
+      stats: [{ value: riskiest.meanRisk, format: pct }],
       body: `${riskiest.jobRole}s in ${riskiest.department} have the highest average risk score, across ${riskiest.n} people.`,
       tone: "bg-[radial-gradient(120%_120%_at_80%_0%,var(--hero-c),var(--hero-a))]",
     },
     {
       question: "Does overtime matter?",
-      stat: `${pct(overtime.yes)} vs ${pct(overtime.no)}`,
+      stats: [
+        { value: overtime.yes, format: pct },
+        { value: overtime.no, format: pct },
+      ],
       body: `People who worked overtime left at about ${(overtime.yes / (overtime.no || 1)).toFixed(1)} times the rate of those who didn't.`,
       tone: "bg-surface border border-line",
     },
     {
       question: "What raises risk most often?",
-      stat: pct(topDriver.share),
+      stats: [{ value: topDriver.share, format: pct }],
       body: `of employees have ${topDriver.text} among the factors pushing their score up.`,
       tone: "bg-signal-soft",
     },
     {
       question: "How sure is the model?",
-      stat: metrics.after.roc_auc.toFixed(2),
+      stats: [{ value: metrics.after.roc_auc, format: two }],
       body: `It ranks a leaver above a stayer about ${pct(metrics.after.roc_auc)} of the time. The 95% range is ${pct(lo)} to ${pct(hi)}.`,
       tone: "bg-surface border border-line",
     },
@@ -103,7 +111,14 @@ function Track({ cards }: { cards: Card[] }) {
                 </span>
               </div>
               <div>
-                <p className="tabular text-[clamp(3rem,7vw,5.5rem)] font-semibold leading-none tracking-[-0.04em]">{c.stat}</p>
+                <p className="tabular text-[clamp(3rem,7vw,5.5rem)] font-semibold leading-none tracking-[-0.04em]">
+                  {c.stats.map((st, k) => (
+                    <Fragment key={k}>
+                      {k > 0 && " vs "}
+                      <CountUp value={st.value} format={st.format} />
+                    </Fragment>
+                  ))}
+                </p>
                 <p className="mt-4 max-w-[44ch] text-sm leading-relaxed text-ink-soft md:text-base">{c.body}</p>
               </div>
             </li>

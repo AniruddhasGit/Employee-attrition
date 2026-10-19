@@ -7,7 +7,9 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, ty
 import { ApiError, signIn, type Session } from "@/lib/api";
 import { EASE_OUT } from "@/lib/motion";
 import { useSession } from "@/lib/session";
+import { WordReveal } from "@/components/ui/motion";
 import { CheckInPanel } from "./CheckInPanel";
+import { BreathingDot, Collapse, PatientBar, useLabelSwap, usePanelEnter, useRowEnter } from "./motion";
 import { field, noRing, underline } from "./fields";
 
 function destination(session: Session, next: string | null): string {
@@ -103,48 +105,24 @@ export function LoginForm() {
     setCaps(e.getModifierState("CapsLock"));
   }
 
-  const enter = (i: number) =>
-    reduce
-      ? {}
-      : {
-          initial: { opacity: 0, transform: "translateY(14px)" },
-          animate: { opacity: 1, transform: "translateY(0px)" },
-          transition: { duration: 0.6, delay: 0.08 + 0.06 * i, ease: EASE_OUT },
-        };
-
-  const swap = reduce
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
-    : {
-        initial: { opacity: 0, filter: "blur(4px)", transform: "translateY(6px)" },
-        animate: { opacity: 1, filter: "blur(0px)", transform: "translateY(0px)" },
-        exit: { opacity: 0, filter: "blur(4px)", transform: "translateY(-6px)" },
-        transition: { duration: 0.2, ease: EASE_OUT },
-      };
+  const enter = useRowEnter();
+  const swap = useLabelSwap();
+  const panel = usePanelEnter();
 
   const locked = busy || welcome !== null;
 
   return (
     <div className="mx-auto grid min-h-[100dvh] max-w-[1400px] grid-cols-1 gap-10 px-4 pb-16 pt-24 md:px-8 md:pt-28 lg:grid-cols-12 lg:gap-16">
-      <motion.div
-        {...(reduce
-          ? {}
-          : {
-              initial: { opacity: 0, transform: "scale(0.985)" },
-              animate: { opacity: 1, transform: "scale(1)" },
-              transition: { duration: 0.8, ease: EASE_OUT },
-            })}
-        className="lg:col-span-7"
-      >
+      <motion.div {...panel} className="lg:col-span-7">
         <CheckInPanel />
       </motion.div>
 
       <div className="flex flex-col justify-center lg:col-span-5 lg:py-10">
-        <motion.h1
-          {...enter(0)}
+        <WordReveal
+          text="Sign in."
+          delay={0.05}
           className="text-[clamp(3.25rem,8vw,6.5rem)] font-semibold leading-[0.9] tracking-[-0.05em]"
-        >
-          Sign in.
-        </motion.h1>
+        />
         <motion.p {...enter(1)} className="mt-5 max-w-[40ch] leading-relaxed text-muted">
           HR lands on the people who might leave and what would help. Employees land on their quarterly check-in.
         </motion.p>
@@ -221,57 +199,52 @@ export function LoginForm() {
                 </motion.p>
               )}
             </AnimatePresence>
+            {/* Inside the field group, so opening it grows its own height instead of popping a flex gap. */}
+            <Collapse show={error !== null}>
+              <p role="alert" className="mt-4 border-l-2 border-signal pl-3 text-sm leading-relaxed text-signal">
+                {error}
+              </p>
+            </Collapse>
           </motion.div>
 
-          {error && (
-            <p role="alert" className="-mt-3 border-l-2 border-signal pl-3 text-sm leading-relaxed text-signal">
-              {error}
-            </p>
-          )}
-
-          <motion.div {...enter(4)} className="flex items-center gap-5">
+          <motion.div {...enter(4)} className="flex flex-col">
             <button
               type="submit"
               disabled={locked || !email || !password}
-              className={`relative inline-flex h-12 min-w-[9.5rem] items-center justify-center overflow-hidden rounded-full px-7 text-sm font-medium transition-[transform,background-color,opacity] duration-150 ease-out active:scale-[0.97] disabled:cursor-not-allowed ${welcome ? "bg-ink text-bg" : "bg-ink text-bg disabled:opacity-40"} ${busy && !welcome ? "disabled:opacity-80" : ""}`}
+              className={`group relative inline-flex h-12 w-fit min-w-[9.5rem] items-center justify-center overflow-hidden rounded-full px-7 text-sm font-medium transition-[transform,background-color,opacity] duration-150 ease-out active:scale-[0.97] disabled:cursor-not-allowed ${welcome ? "bg-ink text-bg" : "bg-ink text-bg disabled:opacity-40"} ${busy && !welcome ? "disabled:opacity-80" : ""}`}
             >
+              {/* Three states, one label at a time: ready, working, welcomed. */}
               <AnimatePresence mode="popLayout" initial={false}>
                 {welcome ? (
                   <motion.span key="welcome" {...swap} className="inline-flex items-center gap-2">
                     <CheckIcon size={15} weight="bold" aria-hidden />
                     Welcome, {welcome}
                   </motion.span>
+                ) : busy ? (
+                  <motion.span key="busy" {...swap} className="inline-flex items-center gap-2">
+                    <CircleNotchIcon size={15} className="animate-spin" aria-hidden />
+                    Sign in
+                  </motion.span>
                 ) : (
                   <motion.span key="idle" {...swap} className="inline-flex items-center gap-2">
-                    {busy ? (
-                      <CircleNotchIcon size={15} className="animate-spin" aria-hidden />
-                    ) : null}
                     Sign in
-                    {!busy && <ArrowRightIcon size={14} aria-hidden />}
+                    <ArrowRightIcon size={14} aria-hidden className="transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
                   </motion.span>
                 )}
               </AnimatePresence>
             </button>
-          </motion.div>
 
-          <AnimatePresence initial={false}>
-            {waking && !welcome && (
-              <motion.p
-                role="status"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: reduce ? 0 : 0.25, ease: EASE_OUT }}
-                className="-mt-4 flex max-w-[40ch] items-start gap-2.5 overflow-hidden text-sm leading-relaxed text-muted"
-              >
-                <span className="relative mt-[7px] flex size-2 shrink-0" aria-hidden>
-                  <span className="absolute inset-0 rounded-full bg-calm opacity-60 motion-safe:animate-ping" />
-                  <span className="relative size-2 rounded-full bg-calm" />
-                </span>
-                Starting the server. This takes about a minute on the first visit.
-              </motion.p>
-            )}
-          </AnimatePresence>
+            {/* A sleeping server is waited for, calmly: a breathing dot and a slow hairline, never an error. */}
+            <Collapse show={waking && !welcome}>
+              <div className="flex max-w-[40ch] flex-col gap-3 pt-5">
+                <p role="status" className="flex items-start gap-2.5 text-sm leading-relaxed text-muted">
+                  <BreathingDot className="mt-[7px]" />
+                  Starting the server. This takes about a minute on the first visit.
+                </p>
+                <PatientBar />
+              </div>
+            </Collapse>
+          </motion.div>
         </form>
 
         <motion.p {...enter(5)} className="mt-14 text-xs text-mist">

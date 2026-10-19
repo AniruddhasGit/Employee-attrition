@@ -78,8 +78,8 @@ export function AppNav() {
                 <Link
                   href={l.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative block whitespace-nowrap rounded-full px-2.5 py-1.5 sm:px-3.5 font-medium transition-colors duration-200 ${
-                    active ? "text-bg" : "text-ink-soft hover:text-ink"
+                  className={`relative block whitespace-nowrap rounded-full px-2.5 py-1.5 font-medium transition-[color,background-color,transform] duration-150 ease-out active:scale-[0.96] sm:px-3.5 ${
+                    active ? "text-bg" : "text-ink-soft [@media(hover:hover)]:hover:bg-ink/[0.06] [@media(hover:hover)]:hover:text-ink"
                   }`}
                 >
                   {l.label}
@@ -106,9 +106,9 @@ export function AppNav() {
             onClick={onSignOut}
             disabled={leaving}
             aria-label="Sign out"
-            className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 transition-transform duration-150 ease-out hover:bg-surface active:scale-[0.97] disabled:opacity-60 sm:px-3.5"
+            className="group inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-full border border-line px-3 transition-[transform,background-color,border-color] duration-150 ease-out active:scale-[0.97] disabled:opacity-60 sm:px-3.5 [@media(hover:hover)]:hover:border-ink/20 [@media(hover:hover)]:hover:bg-surface"
           >
-            <SignOutIcon size={15} /> <span className="hidden sm:inline">Sign out</span>
+            <SignOutIcon size={15} className="transition-transform duration-200 ease-out [@media(hover:hover)]:group-hover:translate-x-0.5" /> <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </nav>

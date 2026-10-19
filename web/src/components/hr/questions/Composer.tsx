@@ -13,10 +13,11 @@ const OPTION_MAX = 60;
 const OPTIONS_MIN = 2;
 const OPTIONS_MAX = 6;
 
-type Draft = { key: number; label: string; options: string[] };
+/** `ids` gives each option row a stable key, so rows animate in and out without the others re-mounting. */
+type Draft = { key: number; label: string; options: string[]; ids: number[] };
 
 let nextKey = 0;
-const blank = (): Draft => ({ key: nextKey++, label: "", options: ["", ""] });
+const blank = (): Draft => ({ key: nextKey++, label: "", options: ["", ""], ids: [nextKey++, nextKey++] });
 
 const fieldCls =
   "w-full rounded-xl border border-line bg-bg px-3.5 py-2.5 text-base leading-relaxed transition-[border-color,box-shadow] duration-150 ease-out placeholder:text-mist focus:border-ink/40 focus:shadow-[0_0_0_3px_rgb(127_140_153/0.18)] focus:outline-none";
@@ -46,6 +47,7 @@ function DraftFields({
   onChange: (d: Draft) => void;
   onRemove: () => void;
 }) {
+  const reduce = useReducedMotion();
   const issue = showProblem ? problem(d) : null;
   const setOption = (i: number, v: string) => onChange({ ...d, options: d.options.map((o, j) => (j === i ? v : o)) });
   return (
@@ -81,9 +83,18 @@ function DraftFields({
       </p>
 
       <p className="mt-2 text-sm font-medium">Answers people can pick</p>
-      <ol className="mt-2 space-y-2">
+      <ol className="mt-2 flex flex-col gap-2">
+        <AnimatePresence initial={false} mode="popLayout">
         {d.options.map((o, i) => (
-          <li key={i} className="flex items-center gap-2">
+          <motion.li
+            key={d.ids[i]}
+            layout={reduce ? false : "position"}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, transition: { duration: 0.12, ease: EASE_OUT } }}
+            transition={{ duration: 0.22, ease: EASE_OUT, layout: { duration: 0.22, ease: EASE_OUT } }}
+            className="flex items-center gap-2"
+          >
             <span aria-hidden className="tabular w-4 shrink-0 text-center font-mono text-xs text-muted">
               {i + 1}
             </span>
@@ -97,24 +108,27 @@ function DraftFields({
             />
             <button
               type="button"
-              onClick={() => onChange({ ...d, options: d.options.filter((_, j) => j !== i) })}
+              onClick={() => onChange({ ...d, options: d.options.filter((_, j) => j !== i), ids: d.ids.filter((_, j) => j !== i) })}
               disabled={d.options.length <= OPTIONS_MIN}
               aria-label={`Remove option ${i + 1}`}
               className="grid size-9 shrink-0 place-items-center rounded-full text-muted transition-[transform,background-color,color] duration-150 ease-out hover:bg-bg hover:text-ink active:scale-[0.95] disabled:invisible"
             >
               <XIcon size={13} aria-hidden />
             </button>
-          </li>
+          </motion.li>
         ))}
+        </AnimatePresence>
       </ol>
       {d.options.length < OPTIONS_MAX && (
-        <button
+        <motion.button
+          layout={reduce ? false : "position"}
+          transition={{ duration: 0.22, ease: EASE_OUT }}
           type="button"
-          onClick={() => onChange({ ...d, options: [...d.options, ""] })}
+          onClick={() => onChange({ ...d, options: [...d.options, ""], ids: [...d.ids, nextKey++] })}
           className="mt-2 ml-5 inline-flex min-h-9 items-center gap-1.5 rounded-full px-3 text-sm text-ink-soft transition-[transform,background-color] duration-150 ease-out hover:bg-bg active:scale-[0.97]"
         >
           <PlusIcon size={13} aria-hidden /> Add option
-        </button>
+        </motion.button>
       )}
       {issue && (
         <p role="alert" className="mt-3 text-sm text-signal">
@@ -180,15 +194,16 @@ export function Composer({ status, onStatus }: { status: QuestionStatus; onStatu
         Multiple choice, 2 to 6 answers each. Employees see them at their next check-in. Room for {room} more.
       </p>
 
-      <div className="mt-6 space-y-3">
-        <AnimatePresence initial={false}>
+      <div className="mt-6 flex flex-col gap-3">
+        <AnimatePresence initial={false} mode="popLayout">
           {drafts.map((d, i) => (
             <motion.div
               key={d.key}
+              layout={reduce ? false : "position"}
               initial={{ opacity: 0, transform: reduce ? "translateY(0px)" : "translateY(8px)" }}
               animate={{ opacity: 1, transform: "translateY(0px)" }}
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
-              transition={{ duration: 0.25, ease: EASE_OUT }}
+              transition={{ duration: 0.25, ease: EASE_OUT, layout: { duration: 0.25, ease: EASE_OUT } }}
             >
               <DraftFields
                 d={d}

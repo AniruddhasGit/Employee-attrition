@@ -1,10 +1,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "motion/react";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { int, money } from "@/lib/format";
 import { EASE_OUT } from "@/lib/motion";
-import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { CountUp } from "@/components/ui/motion";
 
 export const REPLACEMENT_MIN = 10;
 export const REPLACEMENT_MAX = 200;
@@ -39,6 +39,8 @@ export function CostAtStake({
   onReplacement: (pct: number) => void;
 }) {
   const reduce = useReducedMotion();
+  // Counts up once on arrival; after the slider moves, the figure follows it quickly instead of re-running the count.
+  const [touched, setTouched] = useState(false);
   const fill = ((replacement - REPLACEMENT_MIN) / (REPLACEMENT_MAX - REPLACEMENT_MIN)) * 100;
 
   return (
@@ -62,9 +64,10 @@ export function CostAtStake({
       <div>
         <p className="text-sm text-night-ink/70">Cost at stake</p>
         <p data-testid="cost-at-stake" data-value={Math.round(cost)} className="mt-4">
-          <AnimatedNumber
+          <CountUp
             value={cost}
             format={money}
+            duration={touched ? 0.35 : 1.1}
             className="text-[clamp(3.5rem,8vw,6.5rem)] font-semibold leading-none tracking-[-0.05em]"
           />
         </p>
@@ -87,7 +90,10 @@ export function CostAtStake({
           step={5}
           value={replacement}
           aria-valuetext={`${replacement}% of salary`}
-          onChange={(e) => onReplacement(Number(e.target.value))}
+          onChange={(e) => {
+            setTouched(true);
+            onReplacement(Number(e.target.value));
+          }}
           className={range}
           style={{ "--fill": `${fill}%` } as CSSProperties}
         />

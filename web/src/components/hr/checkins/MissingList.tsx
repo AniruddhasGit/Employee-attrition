@@ -1,5 +1,9 @@
+"use client";
+
 import { ArrowUpRightIcon, CheckCircleIcon } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import { EASE_OUT } from "@/lib/motion";
+import { motion, useReducedMotion } from "motion/react";
 import type { CheckInStatus } from "@/lib/api";
 
 type Missing = CheckInStatus["missing"];
@@ -11,6 +15,7 @@ function initials(name: string) {
 
 /** People who haven't answered this quarter, grouped by department, each linking to their page. */
 export function MissingList({ people }: { people: Missing }) {
+  const reduce = useReducedMotion();
   const groups = new Map<string, Missing>();
   for (const p of people) groups.set(p.department, [...(groups.get(p.department) ?? []), p]);
 
@@ -43,8 +48,16 @@ export function MissingList({ people }: { people: Missing }) {
             data-lenis-prevent
             className="-mx-2 max-h-[26rem] overflow-y-auto overscroll-contain px-2 pb-6 [mask-image:linear-gradient(to_bottom,black_calc(100%-2.5rem),transparent)] lg:absolute lg:inset-0 lg:mx-0 lg:max-h-none lg:px-0"
           >
-            {[...groups].map(([dept, rows]) => (
-              <div key={dept} className="mb-5 last:mb-0">
+            {[...groups].map(([dept, rows], i) => (
+              // Each team's group rises in as it scrolls into view inside the list.
+              <motion.div
+                key={dept}
+                className="mb-5 last:mb-0"
+                initial={{ opacity: 0, y: reduce ? 0 : 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: "some" }}
+                transition={{ duration: reduce ? 0.2 : 0.5, delay: reduce ? 0 : 0.1 + Math.min(i, 4) * 0.07, ease: EASE_OUT }}
+              >
                 <h3 className="sticky top-0 z-10 flex items-center justify-between bg-surface py-2 text-xs font-medium tracking-wide text-muted uppercase">
                   <span>{dept}</span>
                   <span className="tabular">{rows.length}</span>
@@ -75,7 +88,7 @@ export function MissingList({ people }: { people: Missing }) {
                     </li>
                   ))}
                 </ul>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { CheckIcon, ClockIcon, LockSimpleIcon, SparkleIcon } from "@phosphor-icons/react/dist/ssr";
 import { motion, useReducedMotion } from "motion/react";
 import { PillButton } from "@/components/ui/PillButton";
-import { EASE_OUT } from "@/lib/motion";
+import { EASE_IN_OUT, EASE_OUT } from "@/lib/motion";
 import { fmtQuarter } from "./labels";
 
 /** This quarter's check-in: an invitation while open, a calm confirmation once done (with a nudge if HR added questions since). */
@@ -45,14 +45,33 @@ export function StatusCard({ quarter, status, newQuestions = 0 }: { quarter: str
           )}
         </div>
         {newQuestions > 0 && (
-          <div
+          // Draws the eye once, after the card settles: it rises in, a soft sheen passes over it, the sparkle turns. No loop.
+          <motion.div
             data-testid="new-questions"
-            className="relative mt-8 flex flex-col gap-5 rounded-2xl bg-ink p-5 text-bg sm:flex-row sm:items-center sm:justify-between md:p-6"
+            initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(10px) scale(0.985)" }}
+            animate={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
+            transition={{ duration: 0.6, delay: 0.45, ease: EASE_OUT }}
+            className="relative isolate mt-8 flex flex-col gap-5 overflow-hidden rounded-2xl bg-ink p-5 text-bg sm:flex-row sm:items-center sm:justify-between md:p-6"
           >
+            {!reduce && (
+              <motion.span
+                aria-hidden
+                initial={{ transform: "translateX(-110%)" }}
+                animate={{ transform: "translateX(110%)" }}
+                transition={{ duration: 1.1, delay: 0.95, ease: EASE_IN_OUT }}
+                className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(105deg,transparent_30%,color-mix(in_oklab,var(--bg)_16%,transparent)_50%,transparent_70%)]"
+              />
+            )}
             <div className="flex items-start gap-4">
-              <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full bg-bg/15">
+              <motion.span
+                aria-hidden
+                className="grid size-9 shrink-0 place-items-center rounded-full bg-bg/15"
+                initial={false}
+                animate={reduce ? undefined : { transform: ["rotate(0deg) scale(1)", "rotate(72deg) scale(1.16)", "rotate(90deg) scale(1)"] }}
+                transition={{ duration: 0.9, delay: 1.05, ease: EASE_OUT, times: [0, 0.5, 1] }}
+              >
                 <SparkleIcon size={18} weight="fill" />
-              </span>
+              </motion.span>
               <div>
                 <p className="text-lg font-semibold leading-snug tracking-[-0.015em]">
                   HR added {newQuestions} new {newQuestions === 1 ? "question" : "questions"}.
@@ -63,7 +82,7 @@ export function StatusCard({ quarter, status, newQuestions = 0 }: { quarter: str
             <PillButton href="/me/check-in" className="w-fit shrink-0">
               Answer the new {newQuestions === 1 ? "question" : "questions"}
             </PillButton>
-          </div>
+          </motion.div>
         )}
       </div>
     );

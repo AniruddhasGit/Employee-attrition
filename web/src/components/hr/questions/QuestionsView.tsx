@@ -6,6 +6,7 @@ import { useApi } from "@/lib/useApi";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Reveal } from "@/components/ui/Reveal";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { CrossFade } from "../CrossFade";
 import { Composer } from "./Composer";
 import { CoreQuestions } from "./CoreQuestions";
 import { QuestionList } from "./QuestionList";
@@ -33,13 +34,20 @@ export function QuestionsView() {
   // Every change returns the whole status; keep the latest one over what the page loaded with.
   const [latest, setLatest] = useState<QuestionStatus | null>(null);
 
-  if (loading) return <Loading />;
-  if (error || !data) return <ErrorState message={error?.message} status={error?.status} onRetry={retry} />;
+  if (!loading && (error || !data)) return <ErrorState message={error?.message} status={error?.status} onRetry={retry} />;
+  if (!data) {
+    return (
+      <CrossFade id="loading">
+        <Loading />
+      </CrossFade>
+    );
+  }
 
   const status = latest ?? data;
   const asked = status.questions.filter((q) => q.status !== "removed").length;
 
   return (
+    <CrossFade id="loaded">
     <div className="space-y-16 md:space-y-24">
       <Reveal y={16}>
         <RecomputePanel status={status} onStatus={setLatest} />
@@ -69,5 +77,6 @@ export function QuestionsView() {
         </div>
       </div>
     </div>
+    </CrossFade>
   );
 }

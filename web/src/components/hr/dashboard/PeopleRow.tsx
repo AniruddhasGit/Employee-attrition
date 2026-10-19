@@ -1,9 +1,12 @@
 "use client";
 
 import { ArrowDownRightIcon, ArrowRightIcon, ArrowUpRightIcon } from "@phosphor-icons/react";
+import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
+import type { Ref } from "react";
 import type { PersonRow } from "@/lib/api";
 import { pct } from "@/lib/format";
+import { EASE_OUT } from "@/lib/motion";
 import { BandChip } from "../BandChip";
 
 const TREND = {
@@ -22,17 +25,32 @@ function initials(name: string): string {
     .join("");
 }
 
-/** One person. The whole row opens their page; the name is the keyboard link. */
-export function PeopleRow({ p, onOpen }: { p: PersonRow; onOpen: () => void }) {
+/**
+ * One person. The whole row opens their page; the name is the keyboard link.
+ * Rows fade in a touch below their slot and glide when the list re-sorts (quick, no bounce).
+ */
+export function PeopleRow({ p, i, onOpen, ref }: { p: PersonRow; i: number; onOpen: () => void; ref?: Ref<HTMLTableRowElement> }) {
+  const reduce = useReducedMotion();
   const t = TREND[p.trend];
   return (
-    <tr
+    <motion.tr
+      ref={ref}
+      layout={reduce ? false : "position"}
+      initial={{ opacity: 0, y: reduce ? 0 : 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, transition: { duration: 0.12, ease: EASE_OUT } }}
+      transition={{ duration: reduce ? 0 : 0.24, delay: reduce ? 0 : Math.min(i, 11) * 0.018, ease: EASE_OUT, layout: { duration: 0.24, ease: EASE_OUT } }}
       data-testid="person-row"
       data-id={p.id}
       onClick={onOpen}
       className="group cursor-pointer border-t border-line transition-colors duration-150 ease-out hover:bg-bg/70"
     >
-      <td className="py-3 pl-4 pr-3 md:pl-6">
+      <td className="relative py-3 pl-4 pr-3 md:pl-6">
+        {/* A hairline that draws in at the row's edge on hover, so the pointer's row reads at a glance. */}
+        <span
+          aria-hidden
+          className="absolute inset-y-2.5 left-0 w-[2px] origin-center scale-y-0 rounded-full bg-ink transition-transform duration-200 ease-out group-hover:scale-y-100 motion-reduce:transition-none"
+        />
         <span className="flex min-w-0 items-center gap-3">
           <span className="hidden size-9 shrink-0 place-items-center rounded-full bg-haze/45 text-[11px] font-semibold tracking-wide text-ink-soft sm:grid" aria-hidden>
             {initials(p.name)}
@@ -63,7 +81,12 @@ export function PeopleRow({ p, onOpen }: { p: PersonRow; onOpen: () => void }) {
         <span className="flex items-center gap-3">
           <span className={`tabular w-9 shrink-0 font-semibold ${p.riskBand === "high" ? "text-signal" : ""}`}>{pct(p.riskScore)}</span>
           <span className="relative hidden h-1.5 flex-1 overflow-hidden rounded-full bg-line sm:block" aria-hidden>
-            <span className={`absolute inset-y-0 left-0 rounded-full ${BAR[p.riskBand]}`} style={{ width: `${p.riskScore * 100}%` }} />
+            <motion.span
+              className={`absolute inset-y-0 left-0 w-full origin-left rounded-full ${BAR[p.riskBand]}`}
+              initial={{ scaleX: reduce ? p.riskScore : 0 }}
+              animate={{ scaleX: p.riskScore }}
+              transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : 0.08 + Math.min(i, 11) * 0.018, ease: EASE_OUT }}
+            />
           </span>
         </span>
       </td>
@@ -76,6 +99,6 @@ export function PeopleRow({ p, onOpen }: { p: PersonRow; onOpen: () => void }) {
           <span className="sr-only">{t.label}</span>
         </span>
       </td>
-    </tr>
+    </motion.tr>
   );
 }

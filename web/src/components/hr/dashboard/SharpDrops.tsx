@@ -7,6 +7,7 @@ import { useState } from "react";
 import type { SharpDrop } from "@/lib/api";
 import { pct } from "@/lib/format";
 import { EASE_OUT } from "@/lib/motion";
+import { Lift } from "@/components/ui/motion";
 
 const FIRST = 6;
 
@@ -66,14 +67,17 @@ function Card({ d, i }: { d: SharpDrop; i: number }) {
     <motion.li
       layout={!reduce}
       className="w-[84%] shrink-0 snap-start sm:w-auto"
-      initial={{ opacity: 0, transform: `translateY(${reduce ? 0 : 10}px)` }}
-      animate={{ opacity: 1, transform: "translateY(0px)" }}
+      // Rises in as the section scrolls into view (cards added by "Show all" rise as they arrive).
+      initial={{ opacity: 0, y: reduce ? 0 : 14 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
-      transition={{ duration: 0.4, delay: Math.min(i % FIRST, 8) * 0.05, ease: EASE_OUT }}
+      transition={{ duration: 0.5, delay: (i % FIRST) * 0.06, ease: EASE_OUT, layout: { duration: 0.3, ease: EASE_OUT } }}
     >
+      <Lift className="h-full rounded-2xl">
       <Link
         href={`/hr/people/${d.id}`}
-        className="group flex h-full flex-col gap-5 overflow-hidden rounded-2xl border border-line bg-surface p-5 transition-[border-color,box-shadow,transform] duration-200 ease-out hover:border-ink/25 hover:shadow-[0_18px_40px_-28px_rgb(14_17_22/0.45)] active:scale-[0.98]"
+        className="group flex h-full flex-col gap-5 overflow-hidden rounded-2xl border border-line bg-surface p-5 transition-[border-color] duration-200 ease-out hover:border-ink/25"
       >
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -123,6 +127,7 @@ function Card({ d, i }: { d: SharpDrop; i: number }) {
           )}
         </ul>
       </Link>
+      </Lift>
     </motion.li>
   );
 }
@@ -145,7 +150,7 @@ export function SharpDrops({ drops, previousQuarter }: { drops: SharpDrop[]; pre
     <div>
       {/* Phone: one swipeable row. Larger screens: a grid. */}
       <ul className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3 [&::-webkit-scrollbar]:hidden">
-        <AnimatePresence initial={false}>
+        <AnimatePresence>
           {shown.map((d, i) => (
             <Card key={d.id} d={d} i={i} />
           ))}

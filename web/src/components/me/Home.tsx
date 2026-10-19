@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { ApiError, getMe, type MeHome } from "@/lib/api";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { Reveal } from "@/components/ui/Reveal";
+import { Stagger, StaggerItem, WordReveal } from "@/components/ui/motion";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { History } from "./History";
 import { KeepMe } from "./KeepMe";
@@ -46,37 +46,44 @@ export function Home() {
   const d = state.data;
   const first = d.displayName.split(" ")[0];
   return (
-    <div className={shell}>
+    // One orchestrated entrance: the greeting rises word by word while the cards follow in order.
+    <Stagger onMount delay={0.05} gap={0.07} className={shell}>
       <header className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-        <Reveal y={12}>
-          <p className="inline-flex items-center gap-2 text-sm text-muted">
-            <span aria-hidden className="size-1.5 rounded-full bg-calm" />
-            {d.jobRole} · {d.department}
-          </p>
-          <h1 className="mt-3 text-[clamp(2.75rem,7vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.045em]">Hi, {first}.</h1>
-        </Reveal>
-        <Reveal y={12} delay={0.08}>
+        <div>
+          <StaggerItem>
+            <p className="inline-flex items-center gap-2 text-sm text-muted">
+              <span aria-hidden className="size-1.5 rounded-full bg-calm" />
+              {d.jobRole} · {d.department}
+            </p>
+          </StaggerItem>
+          <WordReveal
+            text={`Hi, ${first}.`}
+            delay={0.12}
+            className="mt-3 text-[clamp(2.75rem,7vw,5.5rem)] font-semibold leading-[0.92] tracking-[-0.045em]"
+          />
+        </div>
+        <StaggerItem>
           <CheckInRecord quarter={d.quarter} status={d.checkInStatus} history={d.history} />
-        </Reveal>
+        </StaggerItem>
       </header>
 
-      <Reveal y={16} delay={0.06} className="mt-10 md:mt-14">
+      <StaggerItem className="mt-10 md:mt-14">
         <StatusCard quarter={d.quarter} status={d.checkInStatus} newQuestions={d.newQuestions} />
-      </Reveal>
+      </StaggerItem>
 
       <div className="mt-6 grid gap-6 md:grid-cols-12 md:items-start">
-        <Reveal y={16} delay={0.12} className="md:sticky md:top-24 md:col-span-5">
+        <StaggerItem className="md:sticky md:top-24 md:col-span-5">
           <KeepMe keepMe={d.keepMe} comment={d.comment} options={d.keepMeOptions} quarter={d.history[0]?.quarter ?? null} />
-        </Reveal>
-        <Reveal y={16} delay={0.18} className="md:col-span-7">
+        </StaggerItem>
+        <StaggerItem className="md:col-span-7">
           <Updates updates={d.updates} department={d.department} />
-        </Reveal>
+        </StaggerItem>
       </div>
 
-      <Reveal y={16} className="mt-16 md:mt-24">
+      <div className="mt-16 md:mt-24">
         <History history={d.history} options={d.keepMeOptions} />
-      </Reveal>
-    </div>
+      </div>
+    </Stagger>
   );
 }
 

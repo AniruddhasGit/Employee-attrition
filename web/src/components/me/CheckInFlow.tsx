@@ -1,11 +1,11 @@
 "use client";
 
 import { ArrowLeftIcon, CircleNotchIcon, EyeSlashIcon } from "@phosphor-icons/react";
-import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion, type Variants } from "motion/react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { ApiError, getCheckInForm, sendCheckIn, type Answers, type CheckInForm, type Option, type Question as CoreQuestion } from "@/lib/api";
-import { EASE_OUT } from "@/lib/motion";
+import { EASE_OUT, SPRING } from "@/lib/motion";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { PillButton } from "@/components/ui/PillButton";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -45,6 +45,8 @@ export function CheckInFlow() {
   const [moved, setMoved] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const reduce = useReducedMotion();
 
   const fetchForm = useCallback(() => {
     getCheckInForm()
@@ -83,6 +85,7 @@ export function CheckInFlow() {
       setMoved(false);
       setSending(false);
       setSendError(null);
+      setSent(false);
     },
     [],
   );
@@ -134,7 +137,10 @@ export function CheckInFlow() {
     setSendError(null);
     try {
       await sendCheckIn({ answers: answers as Answers, custom, stayIntent: intent!, keepMe: picks, comment: comment.trim() });
-      router.push("/me");
+      // A short, calm moment of done before heading home (shorter without motion).
+      router.prefetch("/me");
+      setSent(true);
+      setTimeout(() => router.push("/me"), reduce ? 700 : 1500);
     } catch (e) {
       setSending(false);
       setSendError(e instanceof ApiError ? e.message : "Something went wrong.");
@@ -153,95 +159,142 @@ export function CheckInFlow() {
             {step + 1} of {total}
           </p>
         </div>
-        <Progress step={step} total={total} />
+        <Progress step={sent ? total : step} total={total} />
 
-        <div className="mt-10 md:mt-14">
-          <AnimatePresence mode="wait" initial={false} custom={dir}>
-            <Step key={step} dir={dir} focusOnEnter={moved}>
-              {step === 0 && (
-                <div className="mb-10 flex items-start gap-4 rounded-2xl border border-line bg-surface p-5">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-calm/15 text-calm">
-                    <EyeSlashIcon size={18} aria-hidden />
-                  </span>
-                  <p className="self-center text-sm leading-relaxed text-ink-soft">{form.notice}</p>
-                </div>
-              )}
-              {ask ? (
-                <>
-                  <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">
-                    Question {step + 1}
-                    {ask.kind === "custom" && <span className="text-calm"> · new from HR</span>}
-                  </p>
-                  <StepTitle id={`q-${step}`}>{ask.kind === "core" ? ask.question.label : ask.label}</StepTitle>
-                  <div className="mt-10">
-                    <Question
-                      question={ask.kind === "core" ? ask.question : { kind: "choice", options: ask.options }}
-                      value={value}
-                      onChange={choose}
-                      onEnter={next}
-                      labelledBy={`q-${step}`}
-                    />
+        {sent ? (
+          <Sent />
+        ) : (
+          <>
+          {/* Clips the sideways slide on small screens (with room for focus rings) so it never adds a horizontal scroll. */}
+          <div className="relative -mx-4 mt-10 overflow-x-clip px-4 md:mt-14 lg:overflow-x-visible">
+            <AnimatePresence mode="popLayout" initial={false} custom={dir}>
+              <Step key={step} dir={dir} focusOnEnter={moved}>
+                {step === 0 && (
+                  <div className="mb-10 flex items-start gap-4 rounded-2xl border border-line bg-surface p-5">
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-calm/15 text-calm">
+                      <EyeSlashIcon size={18} aria-hidden />
+                    </span>
+                    <p className="self-center text-sm leading-relaxed text-ink-soft">{form.notice}</p>
                   </div>
-                  <p className="mt-5 hidden items-center gap-2 text-xs text-muted md:flex">
-                    <Kbd>←</Kbd>
-                    <Kbd>→</Kbd> move between answers
-                    <span className="mx-1 text-haze">·</span>
-                    <Kbd>Enter</Kbd> goes on
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">Last step</p>
-                  <StepTitle id="q-keep">What would keep you here</StepTitle>
-                  <p className="mt-3 max-w-[52ch] text-muted">Pick up to three. HR sees these with your name, and adds them up by team to see what matters most.</p>
-                  <div className="mt-8">
-                    <KeepMePicker options={form.keepMeOptions} picks={picks} onPicks={setPicks} comment={comment} onComment={setComment} />
-                  </div>
-                </>
-              )}
-            </Step>
-          </AnimatePresence>
-        </div>
+                )}
+                {ask ? (
+                  <>
+                    <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">
+                      Question {step + 1}
+                      {ask.kind === "custom" && <span className="text-calm"> · new from HR</span>}
+                    </p>
+                    <StepTitle id={`q-${step}`}>{ask.kind === "core" ? ask.question.label : ask.label}</StepTitle>
+                    <div className="mt-10">
+                      <Question
+                        question={ask.kind === "core" ? ask.question : { kind: "choice", options: ask.options }}
+                        value={value}
+                        onChange={choose}
+                        onEnter={next}
+                        labelledBy={`q-${step}`}
+                      />
+                    </div>
+                    <p className="mt-5 hidden items-center gap-2 text-xs text-muted md:flex">
+                      <Kbd>←</Kbd>
+                      <Kbd>→</Kbd> move between answers
+                      <span className="mx-1 text-haze">·</span>
+                      <Kbd>Enter</Kbd> goes on
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="mb-4 font-mono text-xs uppercase tracking-[0.16em] text-muted">Last step</p>
+                    <StepTitle id="q-keep">What would keep you here</StepTitle>
+                    <p className="mt-3 max-w-[52ch] text-muted">Pick up to three. HR sees these with your name, and adds them up by team to see what matters most.</p>
+                    <div className="mt-8">
+                      <KeepMePicker options={form.keepMeOptions} picks={picks} onPicks={setPicks} comment={comment} onComment={setComment} />
+                    </div>
+                  </>
+                )}
+              </Step>
+            </AnimatePresence>
+          </div>
 
-        {sendError && (
-          <p role="alert" className="mt-8 text-sm text-signal">
-            {sendError}
-          </p>
-        )}
-
-        <div className="sticky bottom-0 z-20 -mx-4 mt-10 flex items-center justify-between gap-4 border-t border-line bg-bg/85 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md md:static md:mx-0 md:mt-12 md:bg-transparent md:px-0 md:pb-0 md:pt-6 md:backdrop-blur-none">
-          <button
-            type="button"
-            onClick={() => go(step - 1)}
-            disabled={step === 0 || sending}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2.5 text-sm text-ink-soft outline-none transition-[transform,translate,scale,background-color] duration-150 ease-out hover:bg-surface focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] disabled:invisible"
-          >
-            <ArrowLeftIcon size={14} aria-hidden /> Back
-          </button>
-          {last ? (
-            <PillButton type="button" variant="dark" onClick={submit} disabled={sending} className="disabled:opacity-60">
-              <span className="inline-flex items-center gap-2">
-                {sending && <CircleNotchIcon size={14} className="animate-spin" aria-hidden />}
-                Submit
-              </span>
-            </PillButton>
-          ) : (
-            <PillButton type="button" variant="dark" onClick={next} disabled={!answered} className="disabled:pointer-events-none disabled:opacity-40">
-              Next
-            </PillButton>
+          {sendError && (
+            <p role="alert" className="mt-8 text-sm text-signal">
+              {sendError}
+            </p>
           )}
-        </div>
+
+          <div className="sticky bottom-0 z-20 -mx-4 mt-10 flex items-center justify-between gap-4 border-t border-line bg-bg/85 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 backdrop-blur-md md:static md:mx-0 md:mt-12 md:bg-transparent md:px-0 md:pb-0 md:pt-6 md:backdrop-blur-none">
+            <button
+              type="button"
+              onClick={() => go(step - 1)}
+              disabled={step === 0 || sending}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full px-4 py-2.5 text-sm text-ink-soft outline-none transition-[transform,translate,scale,background-color] duration-150 ease-out hover:bg-surface focus-visible:ring-2 focus-visible:ring-calm focus-visible:ring-offset-2 focus-visible:ring-offset-bg active:scale-[0.97] disabled:invisible"
+            >
+              <ArrowLeftIcon size={14} aria-hidden /> Back
+            </button>
+            {last ? (
+              <PillButton type="button" variant="dark" onClick={submit} disabled={sending} className="disabled:opacity-60">
+                <span className="inline-flex items-center gap-2">
+                  {sending && <CircleNotchIcon size={14} className="animate-spin" aria-hidden />}
+                  Submit
+                </span>
+              </PillButton>
+            ) : (
+              <PillButton type="button" variant="dark" onClick={next} disabled={!answered} className="disabled:pointer-events-none disabled:opacity-40">
+                Next
+              </PillButton>
+            )}
+          </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-/** One screen of the flow. Slides in the direction of travel (fade only under reduced motion); inert while leaving. */
-function Step({ dir, focusOnEnter, children }: { dir: number; focusOnEnter: boolean; children: ReactNode }) {
+const SLIDE = 48;
+
+/**
+ * Next slides the new step in from the right while the old one leaves to the left; Back mirrors it.
+ * The direction comes through AnimatePresence `custom`, so the leaving step uses the latest one.
+ */
+const slide: Variants = {
+  enter: (d: number) => ({ opacity: 0, transform: `translateX(${d * SLIDE}px)`, filter: "blur(4px)" }),
+  center: { opacity: 1, transform: "translateX(0px)", filter: "blur(0px)", transition: { duration: 0.42, ease: EASE_OUT } },
+  exit: (d: number) => ({
+    opacity: 0,
+    transform: `translateX(${d * -SLIDE}px)`,
+    filter: "blur(4px)",
+    transition: { duration: 0.22, ease: EASE_OUT },
+  }),
+};
+const fade: Variants = {
+  enter: { opacity: 0 },
+  center: { opacity: 1, transition: { duration: 0.18 } },
+  exit: { opacity: 0, transition: { duration: 0.12 } },
+};
+
+/** One screen of the flow. Slides in the direction of travel (fade only under reduced motion); inert and hidden from assistive tech while leaving. */
+function Step({
+  dir,
+  focusOnEnter,
+  children,
+  ref: outer,
+}: {
+  dir: number;
+  focusOnEnter: boolean;
+  children: ReactNode;
+  /** AnimatePresence's popLayout measures the leaving step through this. */
+  ref?: Ref<HTMLDivElement>;
+}) {
   const reduce = useReducedMotion();
   const present = useIsPresent();
   const ref = useRef<HTMLDivElement>(null);
-  const x = (d: number) => (reduce ? "translateX(0px)" : `translateX(${d * 32}px)`);
+  const setRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      ref.current = el;
+      if (typeof outer === "function") outer(el);
+      else if (outer) outer.current = el;
+    },
+    [outer],
+  );
 
   useEffect(() => {
     // After Next/Back, put focus on the answer so arrow keys work at once.
@@ -252,16 +305,103 @@ function Step({ dir, focusOnEnter, children }: { dir: number; focusOnEnter: bool
 
   return (
     <motion.div
-      ref={ref}
+      ref={setRef}
       inert={!present}
-      initial={{ opacity: 0, transform: x(dir) }}
-      animate={{ opacity: 1, transform: "translateX(0px)", transition: { duration: 0.2, ease: EASE_OUT } }}
-      exit={{ opacity: 0, transform: x(-dir), transition: { duration: 0.12, ease: EASE_OUT } }}
+      aria-hidden={present ? undefined : true}
+      custom={dir}
+      variants={reduce ? fade : slide}
+      initial="enter"
+      animate="center"
+      exit="exit"
     >
       {children}
     </motion.div>
   );
 }
+
+/** The moment after Submit: a ring closes, the check mark draws itself, a few sparks drift out, then home. */
+function Sent() {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => ref.current?.focus({ preventScroll: true }), []);
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      role="status"
+      className="flex min-h-[50vh] flex-col items-center justify-center py-16 text-center outline-none md:min-h-[56vh]"
+    >
+      <div className="relative grid size-24 place-items-center">
+        {!reduce &&
+          SPARKS.map((p, i) => (
+            <motion.span
+              key={i}
+              aria-hidden
+              className="absolute left-1/2 top-1/2 rounded-full bg-calm"
+              style={{ width: p.r * 2, height: p.r * 2, marginLeft: -p.r, marginTop: -p.r }}
+              initial={{ opacity: 0, transform: "translate(0px, 0px) scale(0.6)" }}
+              animate={{
+                opacity: [0, 1, 0],
+                transform: [
+                  "translate(0px, 0px) scale(0.6)",
+                  `translate(${p.x * 60}px, ${p.y * 60}px) scale(1)`,
+                  `translate(${p.x * 76}px, ${p.y * 76}px) scale(0.4)`,
+                ],
+              }}
+              transition={{ duration: 0.9, delay: 0.5, ease: EASE_OUT, times: [0, 0.45, 1] }}
+            />
+          ))}
+        <motion.svg
+          viewBox="0 0 96 96"
+          className="size-24 text-calm"
+          aria-hidden
+          initial={reduce ? false : { opacity: 0, transform: "scale(0.86)" }}
+          animate={{ opacity: 1, transform: "scale(1)" }}
+          transition={{ ...SPRING.soft, opacity: { duration: 0.2 } }}
+        >
+          <circle cx="48" cy="48" r="46" fill="currentColor" fillOpacity={0.12} />
+          <motion.circle
+            cx="48"
+            cy="48"
+            r="46"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            transform="rotate(-90 48 48)"
+            initial={reduce ? false : { pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.6, ease: EASE_OUT }}
+          />
+          <motion.path
+            d="M31 49.5 42.5 61 66 36"
+            fill="none"
+            stroke="var(--ink)"
+            strokeWidth={4.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={reduce ? false : { pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 0.38, delay: 0.36, ease: EASE_OUT }}
+          />
+        </motion.svg>
+      </div>
+      <motion.p
+        className="mt-8 text-[clamp(1.875rem,4.2vw,3.25rem)] font-semibold leading-[1.02] tracking-[-0.035em]"
+        initial={reduce ? false : { opacity: 0, transform: "translateY(10px)", filter: "blur(4px)" }}
+        animate={{ opacity: 1, transform: "translateY(0px)", filter: "blur(0px)" }}
+        transition={{ duration: 0.6, delay: 0.45, ease: EASE_OUT }}
+      >
+        Sent. Thank you.
+      </motion.p>
+    </div>
+  );
+}
+
+/** Eight small dots evenly around the ring, alternating sizes. */
+const SPARKS = Array.from({ length: 8 }, (_, i) => {
+  const a = (i / 8) * Math.PI * 2 + Math.PI / 8;
+  return { x: Math.cos(a), y: Math.sin(a), r: i % 2 ? 2 : 3 };
+});
 
 function Kbd({ children }: { children: ReactNode }) {
   return (
@@ -279,14 +419,18 @@ function StepTitle({ id, children }: { id: string; children: ReactNode }) {
   );
 }
 
+/** One segment per step. Each fills on a spring as you reach it, and empties as you go back. */
 function Progress({ step, total }: { step: number; total: number }) {
+  const reduce = useReducedMotion();
   return (
     <div className="mt-3 flex gap-1.5" aria-hidden>
       {Array.from({ length: total }, (_, i) => (
         <span key={i} className="h-1 flex-1 overflow-hidden rounded-full bg-haze/70">
-          <span
-            className="block h-full origin-left rounded-full bg-ink transition-transform duration-300 ease-out"
-            style={{ transform: i <= step ? "scaleX(1)" : "scaleX(0)" }}
+          <motion.span
+            className="block h-full origin-left rounded-full bg-ink"
+            initial={false}
+            animate={{ transform: i <= step ? "scaleX(1)" : "scaleX(0)" }}
+            transition={reduce ? { duration: 0 } : SPRING.soft}
           />
         </span>
       ))}
